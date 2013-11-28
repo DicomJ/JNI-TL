@@ -43,13 +43,20 @@ template <typename E>
 struct Array : Env {
 
     template <typename C, typename U = void> struct Cast {};
-    template <typename U> struct Cast<jint, U> { typedef jintArray Type; };
-    template <typename U> struct Cast<jobject, U> { typedef jobjectArray Type; };
-    // ...
-
+    template <typename U> struct Cast<jboolean, U> { typedef jbooleanArray Type; };
+    template <typename U> struct Cast<jbyte,    U> { typedef    jbyteArray Type; };
+    template <typename U> struct Cast<jchar,    U> { typedef    jcharArray Type; };
+    template <typename U> struct Cast<jshort,   U> { typedef   jshortArray Type; };
+    template <typename U> struct Cast<jint,     U> { typedef     jintArray Type; };
+    template <typename U> struct Cast<jlong,    U> { typedef    jlongArray Type; };
+    template <typename U> struct Cast<jfloat,   U> { typedef   jfloatArray Type; };
+    template <typename U> struct Cast<jdouble,  U> { typedef  jdoubleArray Type; };
+    template <typename U> struct Cast<jobject,  U> { typedef  jobjectArray Type; };
     typedef typename Cast<E>::Type Type;
 
     struct Element;
+
+    jsize lenght() const { return (*this)->GetArrayLength(array); }
 
     Array (const Env &env, Type array) : Env(env), array(array) {}
 

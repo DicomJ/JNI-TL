@@ -1,2 +1,6 @@
 *.pro
 *.pro.user
+out
+.idea
+test/Object.h
+*.iml
