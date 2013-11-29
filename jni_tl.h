@@ -39,10 +39,17 @@ struct String : Env {
 template <> unsigned String::length<char>() const;
 template <> unsigned String::length<jchar>() const;
 
+struct Region {
+    Region(jsize start, jsize length = 1) : start(start), length(length) {}
+    jsize start, length;
+};
+
 template <typename E>
 struct Array : Env {
 
     template <typename C, typename U = void> struct Cast {};
+    template <typename C,
+              typename U> struct Cast<C[],      U> { typedef jobjectArray Type; };
     template <typename U> struct Cast<jboolean, U> { typedef jbooleanArray Type; };
     template <typename U> struct Cast<jbyte,    U> { typedef    jbyteArray Type; };
     template <typename U> struct Cast<jchar,    U> { typedef    jcharArray Type; };
@@ -52,36 +59,71 @@ struct Array : Env {
     template <typename U> struct Cast<jfloat,   U> { typedef   jfloatArray Type; };
     template <typename U> struct Cast<jdouble,  U> { typedef  jdoubleArray Type; };
     template <typename U> struct Cast<jobject,  U> { typedef  jobjectArray Type; };
+    template <typename U> struct Cast<jstring,  U> { typedef  jobjectArray Type; };
     typedef typename Cast<E>::Type Type;
 
     struct Element;
+    struct Elements;
 
-    jsize lenght() const { return (*this)->GetArrayLength(array); }
+    jsize length() const { return (*this)->GetArrayLength(array); }
 
-    Array (const Env &env, Type array) : Env(env), array(array) {}
+    Array(const Env &env, Type array) : Env(env), array(array) {}
+    Array(const Env &env, jsize count);
+    Array(const Env &env, jsize count, jclass clazz, jobject object = 0);
+    Array(const Env &env, jsize count, jstring string = 0);
 
-    Element operator[] (int index) { return Element(*this, index); }
-    const Element operator[] (int index) const { return Element(*this, index); }
+    Elements operator[] (const Region &region);
+    const Elements operator[] (const Region &region) const;
+
+    Element operator[] (int index) { return (*this)[index]; }
+    const Element operator[] (int index) const { return (*this)[index]; }
 
     operator Type () const { return array; }
     private: Type array;
 };
 
+template <typename T>
+struct Array<T>::Elements : protected Array<T>, protected Region {
 
-template <typename Type>
-struct Array<Type>::Element : private Array<Type> {
-    Element(const Array &array, int index) : Array(array), index(index) {}
+    Elements(const Array<T> &array, const Region &region)
+        : Array<T>(array), Region(region), elements(array()) {}
 
-    operator Type () const;
-    Element &operator = (const Type &value) const;
+    Element operator[] (int index) { return Element(*this, start + index); }
+    const Element operator[] (int index) const { return Element(*this, start + index); }
+
+    Elements &operator = (T *values);
+
+    operator T *() const { return elements; }
+    private: T *array() const;
+    private: T *elements;
+};
+
+template <typename T>
+struct Array<T>::Element : protected Elements {
+
+    template <typename C, typename U = void> struct CastInput { typedef T Type;};
+    template <typename C, typename U> struct CastInput<C[], U> { typedef Array::Cast<C> Type; };
+
+    template <typename C, typename U = void> struct CastOutput { typedef T Type; };
+    template <typename C, typename U> struct CastOutput<C[], U> { typedef Array<C> Type; };
+
+    Element(const Elements &elements, int index) : Elements(elements), index(index) {}
+
+    typedef typename CastInput <T>::Type Input;
+    typedef typename CastOutput<T>::Type Output;
+
+    operator Output () const { return ((T *)(*this))[index]; }
+    Element &operator = (const Input &value) { return ((*this)[Region(index)] = &value), *this; }
 
     private: int index;
 };
 
+// ... add Type[] specialization
+
 struct Class : Env {
 
     template <typename Type> struct Field;
-    template <typename ReturnType> struct Method;
+    template <typename ReturnType> struct Method; struct Constructor;
 
     static std::string signature(std::string name) {
         return std::replace(name.begin(), name.end(), '.', '/'), name;
@@ -90,9 +132,9 @@ struct Class : Env {
     Class(const Env &env, jclass clazz)
         : Env(env), clazz(clazz) {}
     Class(const Env &env, const char *clazz)
-        : Env(env), clazz(env->FindClass(clazz)) {}
+        : Env(env), clazz(env->FindClass(signature(clazz).c_str())) {}
     Class(const Env &env, const std::string &clazz)
-        : Env(env), clazz(env->FindClass(clazz.c_str())) {}
+        : Env(env), clazz(env->FindClass(signature(clazz).c_str())) {}
     Class(const Env &env, const char *clazz,
           jobject loader, const jbyte *buffer, jsize bufferLength)
         : Env(env), clazz(env->DefineClass(clazz,
@@ -122,6 +164,9 @@ struct Class : Env {
     jmethodID methodID(const char *name, const char *sig) const {
         return (*this)->GetMethodID(*this, name, sig);
     }
+
+    template <typename Constructor>
+    typename Constructor::Result newObject(const Constructor &constructor, ...);
 
     template <typename ID>
     typename ID::Reference
@@ -306,13 +351,15 @@ struct Class::Field<T>::ID {
     public: typedef typename Field<T>::Reference Reference;
 };
 
-template <typename Type>
-struct Class::Field<Type>::Reference : private Class, private ID {
+template <typename T>
+struct Class::Field<T>::Reference : private Class, private ID {
+
+    typedef typename Field<T>::Accessor Type;
 
     Reference(const Class &clazz, const ID &id) : Class(clazz), ID(id) {}
 
-    operator typename Field<Type>::Accessor () const;
-    Reference &operator = (const typename Field<Type>::Accessor &value);
+    operator Type () const;
+    Reference &operator = (const Type &value);
 };
 
 template <typename Type>
@@ -345,7 +392,7 @@ template <typename T>
 struct Class::Method<T>::ID {
 
     ID(const Class &clazz, const Method<T> &method) : id(clazz.methodIDStatic(method, method.sig())) {}
-    ID(jfieldID id) : id(id) {}
+    ID(jmethodID id) : id(id) {}
 
     operator jmethodID () const { return id; }
     private: jmethodID id;
@@ -355,8 +402,10 @@ struct Class::Method<T>::ID {
     public: typedef typename Method<T>::Reference Reference;
 };
 
-template <typename Type>
-struct Class::Method<Type>::Reference : private Class, private ID {
+template <typename T>
+struct Class::Method<T>::Reference : private Class, private ID {
+
+    typedef typename Class::Field<T>::Accessor Type;
 
     Reference(const Class &clazz, const ID &id) : Class(clazz), ID(id) {}
 
@@ -565,13 +614,15 @@ struct Object::Field<T>::ID {
     public: struct IsObjectFieldID {}; typedef typename Field<T>::Reference Reference;
 };
 
-template <typename Type>
-struct Object::Field<Type>::Reference : private Object, private ID {
+template <typename T>
+struct Object::Field<T>::Reference : private Object, private ID {
+
+    typedef typename Field<T>::Accessor Type;
 
     Reference(const Object &object, const ID &id) : Object(object), ID(id) {}
 
-    operator typename Field<Type>::Accessor () const;
-    Reference &operator = (const typename Field<Type>::Accessor &value);
+    operator Type () const;
+    Reference &operator = (const Type &value);
 };
 
 template <typename Type>
@@ -597,7 +648,7 @@ template <typename T>
 struct Object::Method<T>::ID {
 
     ID(const Class &clazz, const Method<T> &method) : id(clazz.methodID(method, method.sig())) {}
-    ID(jfieldID id) : id(id) {}
+    ID(jmethodID id) : id(id) {}
 
     operator jmethodID () const { return id; }
     private: jmethodID id;
@@ -607,8 +658,10 @@ struct Object::Method<T>::ID {
     public: struct IsObjectMethodID{}; typedef typename Method<T>::Reference Reference;
 };
 
-template <typename Type>
-struct Object::Method<Type>::Reference : private Object, private ID {
+template <typename T>
+struct Object::Method<T>::Reference : private Object, private ID {
+
+    typedef typename Class::Field<T>::Accessor Type;
 
     Reference(const Object &object, const ID &id) : Object(object), ID(id) {}
 
@@ -672,6 +725,27 @@ struct Object::Method<Type>::Reference : private Object, private ID {
     { return call(Nop(), v0, v1, v2, v3, v4, v5, v6, v7, v8, v9); }
     // extendable ...
 };
+
+struct Class::Constructor : Object::Method<void> {
+    struct ID;
+    typedef Object Result;
+
+    Constructor() : Object::Method<void>("<init>") {}
+    template <typename T0, typename T1, typename T2, typename T3,
+              typename T4, typename T5, typename T6, typename T7,
+              typename T8, typename T9 > // extendable ...
+    Constructor(const Args<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> &args = Args<>())
+        : Object::Method<void>("<init>", args) {}
+};
+
+struct Class::Constructor::ID : Object::Method<void>::ID {
+    typedef Object Result;
+
+    ID(const Class &clazz, const Constructor &constructor = Constructor())
+        : Object::Method<void>::ID(clazz, constructor) {}
+    ID(jmethodID id) : Object::Method<void>::ID(id) {}
+};
+
 
 struct Object::Monitor : Env {
     Monitor(const Env &env, jobject object)

@@ -44,8 +44,8 @@ void Test::execute() {
     (Array<jint>) clazz[Class::Field<jint[]>("static_array_field_name")];
     (Array<jobject>) clazz[Class::Field<jobject[]>("static_field_name","class_name")];
 
-    clazz[Class::Field<jint[]>("static_array_field_name")] = Array<jint>(0, 0);
-    clazz[Class::Field<jobject[]>("static_field_name","class_name")] = Array<jobject>(0, 0);
+    clazz[Class::Field<jint[]>("static_array_field_name")] = Array<jint>(0, jintArray(0));
+    clazz[Class::Field<jobject[]>("static_field_name","class_name")] = Array<jobject>(0, jobjectArray(0));
 
     clazz[Class::Method<jint>("static_method_name")];
     clazz[Class::Method<jobject>("static_method_name","class_name")];
@@ -72,8 +72,8 @@ void Test::execute() {
     (Array<jint>) (*this)[Class::Field<jint[]>("static_array_field_name")];
     (Array<jobject>) (*this)[Class::Field<jobject[]>("static_field_name","class_name")];
 
-    (*this)[Class::Field<jint[]>("static_array_field_name")] = Array<jint>(0, 0);
-    (*this)[Class::Field<jobject[]>("static_field_name","class_name")] = Array<jobject>(0, 0);
+    (*this)[Class::Field<jint[]>("static_array_field_name")] = Array<jint>(0, jintArray(0));
+    (*this)[Class::Field<jobject[]>("static_field_name","class_name")] = Array<jobject>(0, jobjectArray(0));
 
     (*this)[Class::Method<jint>("static_method_name")];
     (*this)[Class::Method<jobject>("static_method_name","class_name")];
@@ -90,8 +90,8 @@ void Test::execute() {
     (Array<jint>) (*this)[Field<jint[]>("array field_name")];
     (Array<jobject>) (*this)[Field<jobject[]>("field_name","Object_name")];
 
-    (*this)[Field<jint[]>("array field_name")] = Array<jint>(0, 0);
-    (*this)[Field<jobject[]>("field_name","Object_name")] = Array<jobject>(0, 0);
+    (*this)[Field<jint[]>("array field_name")] = Array<jint>(0, jintArray(0));
+    (*this)[Field<jobject[]>("field_name","Object_name")] = Array<jobject>(0, jobjectArray(0));
 
     (*this)[Method<jint>("static_method_name")];
     (*this)[Method<jobject>("static_method_name","class_name")];
