@@ -31,6 +31,11 @@ void Test::execute() {
     std::string args = Args<jint, jint, jint, jint, jint, jint, jint, jint, jint, jint>();
     args = (const std::string &)Args<jobject, jobject[], jint, jint[]>("lang.String", "lang.Object");
 
+
+    Array<jint>(*this, 10)[Region(3)][1] = jint(10);
+
+
+
     // Class
     clazz[Class::Field<jint>::ID(clazz, "static_field_name")];
     clazz[Class::Method<jint>::ID(clazz, "static_field_name")];

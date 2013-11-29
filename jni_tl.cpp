@@ -41,7 +41,7 @@ template <> const char * Class::Field<void>::Signature::value = "V";
 template <> const char * Class::Field<jstring   >::Signature::value = "Ljava/lang/String;";
 template <> const char * Class::Field<jstring []>::Signature::value = "[Ljava/lang/String;";
 
-template<>
+template <>
 Array<jstring>::Array(const Env &env, jsize count, jstring string)
     : Env(env), array(env->NewObjectArray(count, Class(env, "java.lang.String"), string)) {}
 
@@ -50,15 +50,13 @@ Array<jstring>::Array(const Env &env, jsize count, jstring string)
 
 // jobject specialization
 
-template<>
+template <>
 Array<jobject>::Array(const Env &env, jsize count, jclass clazz, jobject object)
     : Env(env), array(env->NewObjectArray(count, clazz, object)) {}
 
-
 template <>
 Array<jobject>::Elements &
-Array<jobject>::Elements::operator = (jobject *values) {
-
+Array<jobject>::Elements::operator = (const jobject *values) {
     for (jsize i = 0; i < Region::length; ++i) {
         (*this)[Region::start + i] = values[i];
     } return *this;
@@ -74,7 +72,6 @@ Array<jobject>::Element &
 Array<jobject>::Element::operator = (const jobject &object) {
     return (*this)->SetObjectArrayElement(*this, index, object), *this;
 }
-
 
 template <>
 Class::Field<jobject>::Reference::operator jobject () const {
@@ -137,19 +134,44 @@ Array<jobject> Object::Method<jobject[]>::Reference::call(va_list vl) const {
 
 // jint specialization
 
-template<>
+template <>
 Array<jint>::Array(const Env &env, jsize count)
     : Env(env), array(env->NewIntArray(count)) {}
 
-template<>
+template <>
 jint *Array<jint>::Elements::array() const {
     return (*this)->GetIntArrayElements(*this, 0);
 }
 
-template<>
+template <>
 Array<jint>::Elements &
-Array<jint>::Elements::operator = (jint* values) {
+Array<jint>::Elements::operator = (const jint *values) {
     return (*this)->SetIntArrayRegion(*this, Region::start, Region::length, values), *this;
+}
+
+
+template <>
+Array<jint[]>::Array(const Env &env, jsize count)
+    : Env(env), array(env->NewObjectArray(count,
+        Class(env, Class::Field<jint[]>::Signature()), 0)) {}
+
+template <>
+Array<jint[]>::Element &
+Array<jint[]>::Element::operator = (const jintArray &value) {
+    return (*this)->SetObjectArrayElement(*this, index, value), *this;
+}
+
+template <>
+Array<jint[]>::Elements &
+Array<jint[]>::Elements::operator = (const jintArray *values) {
+    for (jsize i = 0; i < Region::length; ++i) {
+        (*this)[Region::start + i] = values[i];
+    } return *this;
+}
+
+template <>
+Array<jint[]>::Element::operator Array<jint> () const {
+    return Array<jint>(*this, (jintArray)(*this)->GetObjectArrayElement(*this, index));
 }
 
 template <> const char * Class::Field<jint      >::Signature::value = "I";

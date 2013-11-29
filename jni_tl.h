@@ -70,10 +70,10 @@ struct Array : Env {
     Array(const Env &env, Type array) : Env(env), array(array) {}
     Array(const Env &env, jsize count);
     Array(const Env &env, jsize count, jclass clazz, jobject object = 0);
-    Array(const Env &env, jsize count, jstring string = 0);
+    Array(const Env &env, jsize count, jstring string);
 
-    Elements operator[] (const Region &region);
-    const Elements operator[] (const Region &region) const;
+    Elements operator[] (const Region &region) { return Elements(*this, region); }
+    const Elements operator[] (const Region &region) const { return Elements(*this, region); }
 
     Element operator[] (int index) { return (*this)[index]; }
     const Element operator[] (int index) const { return (*this)[index]; }
@@ -85,15 +85,24 @@ struct Array : Env {
 template <typename T>
 struct Array<T>::Elements : protected Array<T>, protected Region {
 
+    template <typename C, typename U = void> struct CastInput { typedef T Type;};
+    template <typename C, typename U> struct CastInput<C[], U> { typedef typename Array<T>::template Cast<C>::Type Type; };
+
+    template <typename C, typename U = void> struct CastOutput { typedef T Type; };
+    template <typename C, typename U> struct CastOutput<C[], U> { typedef Array<C> Type; };
+
+    typedef typename CastInput <T>::Type Input;
+    typedef typename CastOutput<T>::Type Output;
+
     Elements(const Array<T> &array, const Region &region)
-        : Array<T>(array), Region(region), elements(array()) {}
+        : Array<T>(array), Region(region), elements(0) {}
 
     Element operator[] (int index) { return Element(*this, start + index); }
     const Element operator[] (int index) const { return Element(*this, start + index); }
 
-    Elements &operator = (T *values);
+    Elements &operator = (const Input *values);
 
-    operator T *() const { return elements; }
+    operator T *() const { return elements != 0 ? elements : this->array(); }
     private: T *array() const;
     private: T *elements;
 };
@@ -101,24 +110,28 @@ struct Array<T>::Elements : protected Array<T>, protected Region {
 template <typename T>
 struct Array<T>::Element : protected Elements {
 
-    template <typename C, typename U = void> struct CastInput { typedef T Type;};
-    template <typename C, typename U> struct CastInput<C[], U> { typedef Array::Cast<C> Type; };
-
-    template <typename C, typename U = void> struct CastOutput { typedef T Type; };
-    template <typename C, typename U> struct CastOutput<C[], U> { typedef Array<C> Type; };
-
     Element(const Elements &elements, int index) : Elements(elements), index(index) {}
 
-    typedef typename CastInput <T>::Type Input;
-    typedef typename CastOutput<T>::Type Output;
-
-    operator Output () const { return ((T *)(*this))[index]; }
-    Element &operator = (const Input &value) { return ((*this)[Region(index)] = &value), *this; }
+    operator typename Elements::Output () const { return ((T *)(*this))[index]; }
+    Element &operator = (const typename Elements::Input &value) {
+        return ((static_cast<Array<T> &>(*this))[Region(index)] = &value), *this;
+    }
 
     private: int index;
 };
 
-// ... add Type[] specialization
+template <> // Just to solve specialization after instantiation error
+Array<jobject>::Element::operator jobject () const;
+template <>
+Array<jobject>::Element &
+Array<jobject>::Element::operator = (const jobject &);
+
+template <>
+Array<jint[]>::Element::operator Array<jint> () const;
+template <>
+Array<jint[]>::Element &
+Array<jint[]>::Element::operator = (const jintArray &value);
+// type[] ...
 
 struct Class : Env {
 
