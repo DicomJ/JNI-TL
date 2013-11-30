@@ -2,6 +2,7 @@
 #include "license/BSD"
 
 #include "jni_tl.h"
+#include "Object.h"
 
 using namespace JNI;
 
@@ -30,11 +31,6 @@ void Test::execute() {
 
     std::string args = Args<jint, jint, jint, jint, jint, jint, jint, jint, jint, jint>();
     args = (const std::string &)Args<jobject, jobject[], jint, jint[]>("lang.String", "lang.Object");
-
-
-    Array<jint>(*this, 10)[Region(3)][1] = jint(10);
-
-
 
     // Class
     clazz[Class::Field<jint>::ID(clazz, "static_field_name")];
@@ -114,6 +110,21 @@ void Test::execute() {
             Method<jobject>("method_name", Args<jobject>("lang.String"), "lang.String"))] (jint(0));
 }
 
+JNIEXPORT void JNICALL Java_Application_test(JNIEnv *env, jclass clazz) {
+    if (false) Test(0, 0).execute();
+
+    {
+        (Array<jobject>)(Array<jobject[]>(env, 10, clazz, 0)[Region(3)][0]);
+        Array<jobject[]>(env, 10, clazz, 0)[Region(3)][0] = Array<jobject>(env, 10, clazz, 0);
+
+        (Array<jint>)(Array<jint[]>(env, 10)[Region(3)][0]);
+        Array<jint[]>(env, 10)[Region(3)][0] = Array<jint>(env, 10);
+
+
+        // ...
+    }
+}
+
 int main() {
-    return 0 ? (Test(0, 0).execute(), 0) : 0;
+    return Java_Application_test(0, 0), 0;
 }

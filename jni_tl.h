@@ -127,6 +127,12 @@ Array<jobject>::Element &
 Array<jobject>::Element::operator = (const jobject &);
 
 template <>
+Array<jobject[]>::Element::operator Array<jobject> () const;
+template <>
+Array<jobject[]>::Element &
+Array<jobject[]>::Element::operator = (const jobjectArray &value);
+
+template <>
 Array<jint[]>::Element::operator Array<jint> () const;
 template <>
 Array<jint[]>::Element &

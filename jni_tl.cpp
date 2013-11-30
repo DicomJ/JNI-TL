@@ -74,6 +74,29 @@ Array<jobject>::Element::operator = (const jobject &object) {
 }
 
 template <>
+Array<jobject[]>::Array(const Env &env, jsize count, jclass clazz, jobject object)
+    : Env(env), array(env->NewObjectArray(count, clazz, object)) {}
+
+template <>
+Array<jobject[]>::Element &
+Array<jobject[]>::Element::operator = (const jobjectArray &value) {
+    return (*this)->SetObjectArrayElement(*this, index, value), *this;
+}
+
+template <>
+Array<jobject[]>::Elements &
+Array<jobject[]>::Elements::operator = (const jobjectArray *values) {
+    for (jsize i = 0; i < Region::length; ++i) {
+        (*this)[Region::start + i] = values[i];
+    } return *this;
+}
+
+template <>
+Array<jobject[]>::Element::operator Array<jobject> () const {
+    return Array<jobject>(*this, (jobjectArray)(*this)->GetObjectArrayElement(*this, index));
+}
+
+template <>
 Class::Field<jobject>::Reference::operator jobject () const {
     return (*this)->GetStaticObjectField(*this, *this);
 }
@@ -127,10 +150,12 @@ Object::Field<jobject[]>::Reference::operator = (const Array<jobject> &value) {
     return (*this)->SetStaticObjectField(*this, *this, value), *this;
 }
 
+
 template <>
 Array<jobject> Object::Method<jobject[]>::Reference::call(va_list vl) const {
     return Array<jobject>(*this, (jobjectArray)(*this)->CallObjectMethodV(*this, *this, vl));
 }
+
 
 // jint specialization
 
@@ -148,7 +173,6 @@ Array<jint>::Elements &
 Array<jint>::Elements::operator = (const jint *values) {
     return (*this)->SetIntArrayRegion(*this, Region::start, Region::length, values), *this;
 }
-
 
 template <>
 Array<jint[]>::Array(const Env &env, jsize count)

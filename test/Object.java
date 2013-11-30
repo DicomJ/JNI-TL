@@ -38,6 +38,8 @@ class Application {
         System.loadLibrary("JNI_TL");
     }
 
+    static native void test();
+
     static native Object[] copyObjects(Object[] objects);
     static Object[] createObjects(int count) {
         AnotherObject[] object = new AnotherObject[count];
@@ -46,11 +48,12 @@ class Application {
     }
 
     public static void main(String [] args) {
-        final int count = 10;
-        Object[] object = createObjects(count);
-        Object[] copy = copyObjects(object);
-        for (int i = 0; i < count; ++i) {
-            object[i].equals(copy[i]);
-        }
+        test();
+//        final int count = 10;
+//        Object[] object = createObjects(count);
+//        Object[] copy = copyObjects(object);
+//        for (int i = 0; i < count; ++i) {
+//            object[i].equals(copy[i]);
+//        }
     }
 }
