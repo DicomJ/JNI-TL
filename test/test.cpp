@@ -33,54 +33,57 @@ void Test::execute() {
     args = (const std::string &)Args<jobject, jobject[], jint, jint[]>("lang.String", "lang.Object");
 
     // Class
-    clazz[Class::Field<jint>::ID(clazz, "static_field_name")];
-    clazz[Class::Method<jint>::ID(clazz, "static_field_name")];
+    clazz[Static::Field<jint>::ID(clazz, "static_field_name")];
+    clazz[Static::Method<jint>::ID(clazz, "static_field_name")];
 
-    (jint) clazz[Class::Field<jint>("static_field_name")];
-    (jobject) clazz[Class::Field<jobject>("static_field_name","class_name")];
+    (jint) clazz[Static::Field<jint>("static_field_name")];
+    (jobject) clazz[Static::Field<jobject>("static_field_name","class_name")];
 
-    clazz[Class::Field<jint>("static_field_name")] = jint(0);
-    clazz[Class::Field<jobject>("static_field_name","class_name")] = jobject(0);
+    clazz[Static::Field<jint>("static_field_name")] = jint(0);
+    clazz[Static::Field<jobject>("static_field_name","class_name")] = jobject(0);
 
-    (Array<jint>) clazz[Class::Field<jint[]>("static_array_field_name")];
-    (Array<jobject>) clazz[Class::Field<jobject[]>("static_field_name","class_name")];
+    (Array<jint>) clazz[Static::Field<jint[]>("static_array_field_name")];
+    (Array<jobject>) clazz[Static::Field<jobject[]>("static_field_name","class_name")];
 
-    clazz[Class::Field<jint[]>("static_array_field_name")] = Array<jint>(0, jintArray(0));
-    clazz[Class::Field<jobject[]>("static_field_name","class_name")] = Array<jobject>(0, jobjectArray(0));
+    clazz[Static::Field<jint[]>("static_array_field_name")] = Array<jint>(0, jintArray(0));
+    clazz[Static::Field<jobject[]>("static_field_name","class_name")] = Array<jobject>(0, jobjectArray(0));
 
-    clazz[Class::Method<jint>("static_method_name")];
-    clazz[Class::Method<jobject>("static_method_name","class_name")];
+    clazz[Static::Method<jint>("static_method_name")];
+    clazz[Static::Method<jobject>("static_method_name","class_name")];
 
-    clazz[Class::Method<jint>::ID(clazz, "static_method_name")];
-    clazz[Class::Method<jint>::ID(clazz,
-          Class::Method<jint>("static_method_name", Args<jobject>("lang.String")))];
-    clazz[Class::Method<jobject>::ID(clazz,
-          Class::Method<jobject>("static_method_name", Args<jobject>("lang.String"), "lang.String"))];
+    clazz[Static::Method<jint>::ID(clazz, "static_method_name")];
+    clazz[Static::Method<jint>::ID(clazz,
+          Static::Method<jint>("static_method_name", Args<jobject>("lang.String")))];
+    clazz[Static::Method<jobject>::ID(clazz,
+          Static::Method<jobject>("static_method_name", Args<jobject>("lang.String"), "lang.String"))];
 
-    clazz[Class::Method<jobject>::ID(clazz,
-          Class::Method<jobject>("static_method_name", Args<jobject>("lang.String"), "lang.String"))] (jint(0));
+    clazz[Static::Method<jobject>::ID(clazz,
+          Static::Method<jobject>("static_method_name", Args<jobject>("lang.String"), "lang.String"))] (jint(0));
 
     // Object
-    (*this)[Class::Field<jint>::ID(clazz, "static_field_name")];
-    (*this)[Class::Method<jint>::ID(clazz, "static_field_name")];
+    (*this)[Static::Field<jint>::ID(clazz, "static_field_name")];
+    (*this)[Static::Method<jint>::ID(clazz, "static_field_name")];
+    (*this)[Class::Method<jint>::ID(clazz, "method_name")];
 
-    (jint) (*this)[Class::Field<jint>("static_field_name")];
-    (jobject) (*this)[Class::Field<jobject>("static_field_name","class_name")];
+    (jint) (*this)[Static::Field<jint>("static_field_name")];
+    (jobject) (*this)[Static::Field<jobject>("static_field_name","class_name")];
 
-    (*this)[Class::Field<jint>("static_field_name")] = jint(0);
-    (*this)[Class::Field<jobject>("static_field_name","class_name")] = jobject(0);
+    (*this)[Static::Field<jint>("static_field_name")] = jint(0);
+    (*this)[Static::Field<jobject>("static_field_name","class_name")] = jobject(0);
 
-    (Array<jint>) (*this)[Class::Field<jint[]>("static_array_field_name")];
-    (Array<jobject>) (*this)[Class::Field<jobject[]>("static_field_name","class_name")];
+    (Array<jint>) (*this)[Static::Field<jint[]>("static_array_field_name")];
+    (Array<jobject>) (*this)[Static::Field<jobject[]>("static_field_name","class_name")];
 
-    (*this)[Class::Field<jint[]>("static_array_field_name")] = Array<jint>(0, jintArray(0));
-    (*this)[Class::Field<jobject[]>("static_field_name","class_name")] = Array<jobject>(0, jobjectArray(0));
+    (*this)[Static::Field<jint[]>("static_array_field_name")] = Array<jint>(0, jintArray(0));
+    (*this)[Static::Field<jobject[]>("static_field_name","class_name")] = Array<jobject>(0, jobjectArray(0));
 
-    (*this)[Class::Method<jint>("static_method_name")];
-    (*this)[Class::Method<jobject>("static_method_name","class_name")];
+    (*this)[Static::Method<jint>("static_method_name")];
+    (*this)[Static::Method<jobject>("static_method_name","class_name")];
+    (*this)[Class::Method<jobject>("method_name","class_name")];
 
     (*this)[Field<jint>::ID(clazz, "field_name")];
     (*this)[Method<jint>::ID(clazz, "method_name")];
+    (*this)[Class::Method<jint>::ID(clazz, "method_name")];
 
     (jint) (*this)[Field<jint>("field_name")];
     (jobject) (*this)[Field<jobject>("field_name","class_name")];
@@ -96,6 +99,7 @@ void Test::execute() {
 
     (*this)[Method<jint>("static_method_name")];
     (*this)[Method<jobject>("static_method_name","class_name")];
+    (*this)[Class::Method<jobject>("static_method_name","class_name")];
 
     (*this)[Method<jint>::ID(clazz, "method_name")];
     (*this)[Method<jint>::ID(clazz,
@@ -103,9 +107,10 @@ void Test::execute() {
     (*this)[Method<jobject>::ID(clazz,
             Method<jobject>("method_name", Args<jobject>("lang.String"), "lang.String"))];
 
+    (*this)[Static::Method<jobject>::ID(clazz,
+            Static::Method<jobject>("static_method_name", Args<jobject>("lang.String"), "lang.String"))] (jint(0));
     (*this)[Class::Method<jobject>::ID(clazz,
-            Class::Method<jobject>("static_method_name", Args<jobject>("lang.String"), "lang.String"))] (jint(0));
-
+            Class::Method<jobject>("method_name", Args<jobject>("lang.String"), "lang.String"))] (jint(0));
     (*this)[Method<jobject>::ID(clazz,
             Method<jobject>("method_name", Args<jobject>("lang.String"), "lang.String"))] (jint(0));
 }

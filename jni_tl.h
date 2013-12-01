@@ -141,8 +141,10 @@ Array<jint[]>::Element::operator = (const jintArray &value);
 
 struct Class : Env {
 
-    template <typename Type> struct Field;
-    template <typename ReturnType> struct Method; struct Constructor;
+    struct Static {
+        template <typename Type> struct Field;
+        template <typename ReturnType> struct Method;
+    };  template <typename ReturnType> struct Method; struct Constructor;
 
     static std::string signature(std::string name) {
         return std::replace(name.begin(), name.end(), '.', '/'), name;
@@ -196,28 +198,28 @@ struct Class : Env {
     operator [] (const ID &id) const { return at(id); }
 
     template <typename Type>
-    typename Field<Type>::Reference
-    operator [] (const Field<Type> &field) {
-        return typename Field<Type>::Reference
-                (*this, typename Field<Type>::ID(*this, field));
+    typename Static::Field<Type>::Reference
+    operator [] (const Static::Field<Type> &field) {
+        return typename Static::Field<Type>::Reference
+                (*this, typename Static::Field<Type>::ID(*this, field));
     }
     template <typename Type>
-    const typename Field<Type>::Reference
-    operator [] (const Field<Type> &field) const {
-        return typename Field<Type>::Reference
-                (*this, typename Field<Type>::ID(*this, field));
+    const typename Static::Field<Type>::Reference
+    operator [] (const Static::Field<Type> &field) const {
+        return typename Static::Field<Type>::Reference
+                (*this, typename Static::Field<Type>::ID(*this, field));
     }
     template <typename ReturnType>
-    typename Method<ReturnType>::Reference
-    operator [] (const Method<ReturnType> &method) {
-        return typename Method<ReturnType>::Reference
-                (*this, typename Method<ReturnType>::ID(*this, method));
+    typename Static::Method<ReturnType>::Reference
+    operator [] (const Static::Method<ReturnType> &method) {
+        return typename Static::Method<ReturnType>::Reference
+                (*this, typename Static::Method<ReturnType>::ID(*this, method));
     }
     template <typename ReturnType>
-    const typename Method<ReturnType>::Reference
-    operator [] (const Method<ReturnType> &method) const {
-        return typename Method<ReturnType>::Reference
-                (*this, typename Method<ReturnType>::ID(*this, method));
+    const typename Static::Method<ReturnType>::Reference
+    operator [] (const Static::Method<ReturnType> &method) const {
+        return typename Static::Method<ReturnType>::Reference
+                (*this, typename Static::Method<ReturnType>::ID(*this, method));
     }
 
     operator jclass () const { return clazz; }
@@ -225,27 +227,27 @@ struct Class : Env {
 
     // SFINAE workaround due to poor C++ compiler function template specialization logic
     private: template <typename ID>
-    typename Field<typename ID::Type>::Reference
-    at(const ID &id, const typename ID::IsClassFieldID & = typename ID::IsClassFieldID()) {
-        return typename Field<typename ID::Type>::Reference(*this, id);
+    typename Static::Field<typename ID::Type>::Reference
+    at(const ID &id, const typename ID::IsStaticFieldID & = typename ID::IsStaticFieldID()) {
+        return typename Static::Field<typename ID::Type>::Reference(*this, id);
     }
 
     private: template <typename ID>
-    const typename Field<typename ID::Type>::Reference
-    at(const ID &id, const typename ID::IsClassFieldID & = typename ID::IsClassFieldID()) const {
-        return typename Field<typename ID::Type>::Reference(*this, id);
+    const typename Static::Field<typename ID::Type>::Reference
+    at(const ID &id, const typename ID::IsStaticFieldID & = typename ID::IsStaticFieldID()) const {
+        return typename Static::Field<typename ID::Type>::Reference(*this, id);
     }
 
     private: template <typename ID>
-    typename Method<typename ID::ReturnType>::Reference
-    at(const ID &id, const typename ID::IsClassMethodID & = typename ID::IsClassMethodID()) {
-        return typename Method<typename ID::ReturnType>::Reference(*this, id);
+    typename Static::Method<typename ID::ReturnType>::Reference
+    at(const ID &id, const typename ID::IsStaticMethodID & = typename ID::IsStaticMethodID()) {
+        return typename Static::Method<typename ID::ReturnType>::Reference(*this, id);
     }
 
     private: template <typename ID>
-    const typename Method<typename ID::ReturnType>::Reference
-    at(const ID &id, const typename ID::IsClassMethodID & = typename ID::IsClassMethodID()) const {
-        return typename Method<typename ID::ReturnType>::Reference(*this, id);
+    const typename Static::Method<typename ID::ReturnType>::Reference
+    at(const ID &id, const typename ID::IsStaticMethodID & = typename ID::IsStaticMethodID()) const {
+        return typename Static::Method<typename ID::ReturnType>::Reference(*this, id);
     }
 };
 
@@ -339,7 +341,7 @@ struct Args {
 };
 
 template <typename T>
-struct Class::Field {
+struct Class::Static::Field {
     template <typename C> struct Cast { typedef C Type; };
     template <typename C> struct Cast<C[]> { typedef Array<C> Type; };
     typedef typename Cast<T>::Type Accessor;
@@ -357,7 +359,7 @@ struct Class::Field {
 };
 
 template <typename T>
-struct Class::Field<T>::ID {
+struct Class::Static::Field<T>::ID {
 
     ID(const Class &clazz, const Field<T> &field) : id(clazz.fieldIDStatic(field, field.sig())) {}
     ID(jfieldID id) : id(id) {}
@@ -366,12 +368,12 @@ struct Class::Field<T>::ID {
     private: jfieldID id;
 
     // Stuff for SFINAE workaround
-    public: typedef T Type; struct IsClassFieldID {};
+    public: typedef T Type; struct IsStaticFieldID {};
     public: typedef typename Field<T>::Reference Reference;
 };
 
 template <typename T>
-struct Class::Field<T>::Reference : private Class, private ID {
+struct Class::Static::Field<T>::Reference : private Class, private ID {
 
     typedef typename Field<T>::Accessor Type;
 
@@ -382,9 +384,9 @@ struct Class::Field<T>::Reference : private Class, private ID {
 };
 
 template <typename Type>
-struct Class::Method {
+struct Class::Static::Method {
 
-    typedef typename Class::Field<Type>::Signature Signature;
+    typedef typename Class::Static::Field<Type>::Signature Signature;
     struct Reference;
     struct ID;
 
@@ -408,7 +410,7 @@ struct Class::Method {
 };
 
 template <typename T>
-struct Class::Method<T>::ID {
+struct Class::Static::Method<T>::ID {
 
     ID(const Class &clazz, const Method<T> &method) : id(clazz.methodIDStatic(method, method.sig())) {}
     ID(jmethodID id) : id(id) {}
@@ -417,14 +419,14 @@ struct Class::Method<T>::ID {
     private: jmethodID id;
 
     // Stuff for SFINAE workaround
-    public: typedef T ReturnType; struct IsClassMethodID {};
+    public: typedef T ReturnType; struct IsStaticMethodID {};
     public: typedef typename Method<T>::Reference Reference;
 };
 
 template <typename T>
-struct Class::Method<T>::Reference : private Class, private ID {
+struct Class::Static::Method<T>::Reference : private Class, private ID {
 
-    typedef typename Class::Field<T>::Accessor Type;
+    typedef typename Class::Static::Field<T>::Accessor Type;
 
     Reference(const Class &clazz, const ID &id) : Class(clazz), ID(id) {}
 
@@ -502,34 +504,44 @@ struct Object : Class {
     bool operator == (jobject object) { return (*this)->IsSameObject(*this, object); }
     jobjectRefType refType() const { return (*this)->GetObjectRefType(*this); }
 
-    template <typename Type>
-    typename Class::Field<Type>::Reference
-    operator [] (const Class::Field<Type> &field) {
-        return Class::operator [] (field);
-    }
-    template <typename Type>
-    const typename Class::Field<Type>::Reference
-    operator [] (const Class::Field<Type> &field) const {
-        return Class::operator [] (field);
-    }
-    template <typename ReturnType>
-    typename Class::Method<ReturnType>::Reference
-    operator [] (const Class::Method<ReturnType> &method) {
-        return Class::operator [] (method);
-    }
-    template <typename ReturnType>
-    const typename Class::Method<ReturnType>::Reference
-    operator [] (const Class::Method<ReturnType> &method) const {
-        return Class::operator [] (method);
-    }
-
     template <typename ID>
     typename ID::Reference
     operator [] (const ID &id) { return at(id); }
-
     template <typename ID>
     const typename ID::Reference
     operator [] (const ID &id) const { return at(id); }
+
+    template <typename Type>
+    typename Class::Static::Field<Type>::Reference
+    operator [] (const Class::Static::Field<Type> &field) {
+        return Class::operator [] (field);
+    }
+    template <typename Type>
+    const typename Class::Static::Field<Type>::Reference
+    operator [] (const Class::Static::Field<Type> &field) const {
+        return Class::operator [] (field);
+    }
+    template <typename ReturnType>
+    typename Class::Static::Method<ReturnType>::Reference
+    operator [] (const Class::Static::Method<ReturnType> &method) {
+        return Class::operator [] (method);
+    }
+    template <typename ReturnType>
+    const typename Class::Static::Method<ReturnType>::Reference
+    operator [] (const Class::Static::Method<ReturnType> &method) const {
+        return Class::operator [] (method);
+    }
+
+template <typename ReturnType>
+typename Class::Method<ReturnType>::Reference
+operator [] (const Class::Method<ReturnType> &method) {
+    return typename Class::Method<ReturnType>::Reference(*this, typename Class::Method<ReturnType>::ID(*this, method));
+}
+template <typename ReturnType>
+const typename Class::Method<ReturnType>::Reference
+operator [] (const Class::Method<ReturnType> &method) const {
+    return typename Class::Method<ReturnType>::Reference(*this, Class::Method<ReturnType>::ID(*this, method));
+}
 
     template <typename Type>
     typename Field<Type>::Reference
@@ -557,26 +569,23 @@ struct Object : Class {
 
     // SFINAE workaround due to poor C++ compiler function template specialization logic
     private: template <typename ID>
-    typename Class::Field<typename ID::Type>::Reference
-    at(const ID &id, const typename ID::IsClassFieldID & = typename ID::IsClassFieldID()) {
+    typename Class::Static::Field<typename ID::Type>::Reference
+    at(const ID &id, const typename ID::IsStaticFieldID & = typename ID::IsStaticFieldID()) {
         return Class::operator [] (id);
     }
-
     private: template <typename ID>
-    const typename Class::Field<typename ID::Type>::Reference
-    at(const ID &id, const typename ID::IsClassFieldID & = typename ID::IsClassFieldID()) const {
+    const typename Class::Static::Field<typename ID::Type>::Reference
+    at(const ID &id, const typename ID::IsStaticFieldID & = typename ID::IsStaticFieldID()) const {
         return Class::operator [] (id);
     }
-
     private: template <typename ID>
-    typename Class::Method<typename ID::ReturnType>::Reference
-    at(const ID &id, const typename ID::IsClassMethodID & = typename ID::IsClassMethodID()) {
+    typename Class::Static::Method<typename ID::ReturnType>::Reference
+    at(const ID &id, const typename ID::IsStaticMethodID & = typename ID::IsStaticMethodID()) {
         return Class::operator [] (id);
     }
-
     private: template <typename ID>
-    const typename Class::Method<typename ID::ReturnType>::Reference
-    at(const ID &id, const typename ID::IsClassMethodID & = typename ID::IsClassMethodID()) const {
+    const typename Class::Static::Method<typename ID::ReturnType>::Reference
+    at(const ID &id, const typename ID::IsStaticMethodID & = typename ID::IsStaticMethodID()) const {
         return Class::operator [] (id);
     }
 
@@ -585,7 +594,6 @@ struct Object : Class {
     at(const ID &id, const typename ID::IsObjectFieldID & = typename ID::IsObjectFieldID()) {
         return typename Field<typename ID::Type>::Reference(*this, id);
     }
-
     private: template <typename ID>
     const typename Field<typename ID::Type>::Reference
     at(const ID &id, const typename ID::IsObjectFieldID & = typename ID::IsObjectFieldID()) const {
@@ -593,11 +601,21 @@ struct Object : Class {
     }
 
     private: template <typename ID>
+    typename Class::Method<typename ID::ReturnType>::Reference
+    at(const ID &id, const typename ID::IsClassMethodID & = typename ID::IsClassMethodID()) {
+        return typename Class::Method<typename ID::ReturnType>::Reference(*this, id);
+    }
+    private: template <typename ID>
+    const typename Class::Method<typename ID::ReturnType>::Reference
+    at(const ID &id, const typename ID::IsClassMethodID & = typename ID::IsClassMethodID()) const {
+        return typename Class::Method<typename ID::ReturnType>::Reference(*this, id);
+    }
+
+    private: template <typename ID>
     typename Method<typename ID::ReturnType>::Reference
     at(const ID &id, const typename ID::IsObjectMethodID & = typename ID::IsObjectMethodID()) {
         return typename Method<typename ID::ReturnType>::Reference(*this, id);
     }
-
     private: template <typename ID>
     const typename Method<typename ID::ReturnType>::Reference
     at(const ID &id, const typename ID::IsObjectMethodID & = typename ID::IsObjectMethodID()) const {
@@ -606,17 +624,17 @@ struct Object : Class {
 };
 
 template <typename Type>
-struct Object::Field : private Class::Field<Type> {
+struct Object::Field : private Class::Static::Field<Type> {
 
-    typedef typename Class::Field<Type>::Signature Signature;
+    typedef typename Class::Static::Field<Type>::Signature Signature;
     struct Reference;
     struct ID;
 
-    operator const char * () const { return Class::Field<Type>::operator const char * (); }
-    const char *sig() const { return Class::Field<Type>::sig(); }
+    operator const char * () const { return Class::Static::Field<Type>::operator const char * (); }
+    const char *sig() const { return Class::Static::Field<Type>::sig(); }
 
     Field(const char *name, const Signature &signature = Signature())
-        : Class::Field<Type>(name, signature) {}
+        : Class::Static::Field<Type>(name, signature) {}
 };
 
 template <typename T>
@@ -629,7 +647,7 @@ struct Object::Field<T>::ID {
     private: jfieldID id;
 
     // Stuff for SFINAE workaround
-    public: typedef typename Class::Field<T>::ID::Type Type;
+    public: typedef typename Class::Static::Field<T>::ID::Type Type;
     public: struct IsObjectFieldID {}; typedef typename Field<T>::Reference Reference;
 };
 
@@ -645,14 +663,14 @@ struct Object::Field<T>::Reference : private Object, private ID {
 };
 
 template <typename Type>
-struct Object::Method : private Class::Method<Type> {
+struct Class::Method : private Class::Static::Method<Type> {
 
-    typedef typename Object::Field<Type>::Signature Signature;
+    typedef typename Class::Static::Method<Type>::Signature Signature;
     struct Reference;
     struct ID;
 
     Method(const char *name, const Signature &signature = Signature())
-        : Class::Method<Type>(name, signature) {}
+        : Class::Static::Method<Type>(name, signature) {}
 
     template <typename T0, typename T1, typename T2, typename T3,
               typename T4, typename T5, typename T6, typename T7,
@@ -660,7 +678,108 @@ struct Object::Method : private Class::Method<Type> {
     Method(const char *name,
            const Args<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> &args,
            const Signature &signature = Signature())
-        : Class::Method<Type>(name, args, signature) {}
+        : Class::Static::Method<Type>(name, args, signature) {}
+};
+
+template <typename T>
+struct Class::Method<T>::ID {
+
+    ID(const Class &clazz, const Method<T> &method) : id(clazz.methodID(method, method.sig())) {}
+    ID(jmethodID id) : id(id) {}
+
+    operator jmethodID () const { return id; }
+    private: jmethodID id;
+
+    // Stuff for SFINAE workaround
+    public: typedef typename Class::Static::Method<T>::ID::ReturnType ReturnType;
+    public: struct IsClassMethodID{}; typedef typename Method<T>::Reference Reference;
+};
+
+template <typename T>
+struct Class::Method<T>::Reference : private Object, private ID {
+
+    typedef typename Class::Static::Method<T>::Reference::Type Type;
+
+    Reference(const Object &object, const ID &id) : Object(object), ID(id) {}
+
+    Type call(va_list) const;
+    Type call(const Nop & nop, ...) const {
+        va_list vl; va_start(vl, nop); Type ret = call(vl); va_end(vl);
+        return ret;
+    }
+
+    Type operator () () const
+    { return call(Nop()); }
+    template <typename T0>
+    Type operator () (const T0 &v0) const
+    { return call(Nop(), v0); }
+    template <typename T0, typename T1>
+    Type operator () (const T0 &v0, const T1 &v1) const
+    { return call(Nop(), v0, v1); }
+    template <typename T0, typename T1, typename T2>
+    Type operator () (const T0 &v0, const T1 &v1, const T2 &v2) const
+    { return call(Nop(), v0, v1, v2); }
+    template <typename T0, typename T1, typename T2, typename T3>
+    Type operator () (const T0 &v0, const T1 &v1, const T2 &v2,
+                      const T3 &v3) const
+    { return call(Nop(), v0, v1, v2, v3); }
+    template <typename T0, typename T1, typename T2, typename T3,
+              typename T4>
+    Type operator () (const T0 &v0, const T1 &v1, const T2 &v2,
+                      const T3 &v3, const T4 &v4) const
+    { return call(Nop(), v0, v1, v2, v3, v4); }
+    template <typename T0, typename T1, typename T2, typename T3,
+              typename T4, typename T5>
+    Type operator () (const T0 &v0, const T1 &v1, const T2 &v2,
+                      const T3 &v3, const T4 &v4, const T5 &v5) const
+    { return call(Nop(), v0, v1, v2, v3, v4, v5); }
+    template <typename T0, typename T1, typename T2, typename T3,
+              typename T4, typename T5, typename T6>
+    Type operator () (const T0 &v0, const T1 &v1, const T2 &v2,
+                      const T3 &v3, const T4 &v4, const T5 &v5,
+                      const T6 &v6) const
+    { return call(Nop(), v0, v1, v2, v3, v4, v5, v6); }
+    template <typename T0, typename T1, typename T2, typename T3,
+              typename T4, typename T5, typename T6, typename T7>
+    Type operator () (const T0 &v0, const T1 &v1, const T2 &v2,
+                      const T3 &v3, const T4 &v4, const T5 &v5,
+                      const T6 &v6, const T7 &v7) const
+    { return call(Nop(), v0, v1, v2, v3, v4, v5, v6, v7); }
+    template <typename T0, typename T1, typename T2, typename T3,
+              typename T4, typename T5, typename T6, typename T7,
+              typename T8>
+    Type operator () (const T0 &v0, const T1 &v1, const T2 &v2,
+                      const T3 &v3, const T4 &v4, const T5 &v5,
+                      const T6 &v6, const T7 &v7, const T8 &v8) const
+    { return call(Nop(), v0, v1, v2, v3, v4, v5, v6, v7, v8); }
+    template <typename T0, typename T1, typename T2, typename T3,
+              typename T4, typename T5, typename T6, typename T7,
+              typename T8, typename T9>
+    Type operator () (const T0 &v0, const T1 &v1, const T2 &v2,
+                      const T3 &v3, const T4 &v4, const T5 &v5,
+                      const T6 &v6, const T7 &v7, const T8 &v8,
+                      const T9 &v9) const
+    { return call(Nop(), v0, v1, v2, v3, v4, v5, v6, v7, v8, v9); }
+    // extendable ...
+};
+
+template <typename Type>
+struct Object::Method : private Class::Static::Method<Type> {
+
+    typedef typename Class::Static::Method<Type>::Signature Signature;
+    struct Reference;
+    struct ID;
+
+    Method(const char *name, const Signature &signature = Signature())
+        : Class::Static::Method<Type>(name, signature) {}
+
+    template <typename T0, typename T1, typename T2, typename T3,
+              typename T4, typename T5, typename T6, typename T7,
+              typename T8, typename T9 > // extendable ...
+    Method(const char *name,
+           const Args<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> &args,
+           const Signature &signature = Signature())
+        : Class::Static::Method<Type>(name, args, signature) {}
 };
 
 template <typename T>
@@ -673,14 +792,14 @@ struct Object::Method<T>::ID {
     private: jmethodID id;
 
     // Stuff for SFINAE workaround
-    public: typedef typename Class::Method<T>::ID::ReturnType ReturnType;
+    public: typedef typename Class::Static::Method<T>::ID::ReturnType ReturnType;
     public: struct IsObjectMethodID{}; typedef typename Method<T>::Reference Reference;
 };
 
 template <typename T>
 struct Object::Method<T>::Reference : private Object, private ID {
 
-    typedef typename Class::Field<T>::Accessor Type;
+    typedef typename Class::Static::Method<T>::Reference::Type Type;
 
     Reference(const Object &object, const ID &id) : Object(object), ID(id) {}
 
@@ -764,7 +883,6 @@ struct Class::Constructor::ID : Object::Method<void>::ID {
         : Object::Method<void>::ID(clazz, constructor) {}
     ID(jmethodID id) : Object::Method<void>::ID(id) {}
 };
-
 
 struct Object::Monitor : Env {
     Monitor(const Env &env, jobject object)

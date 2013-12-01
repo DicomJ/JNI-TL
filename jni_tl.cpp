@@ -12,7 +12,6 @@ template <> unsigned String::length<jchar>() const {
     return (*this)->GetStringLength(string);
 }
 
-
 template <>
 Object Class::newObject(const Class::Constructor &constructor, ...) {
     va_list vl; va_start(vl, constructor);
@@ -21,7 +20,6 @@ Object Class::newObject(const Class::Constructor &constructor, ...) {
     va_end(vl);
     return object;
 }
-
 template <>
 Object Class::newObject(const Class::Constructor::ID &id, ...) {
     va_list vl; va_start(vl, id);
@@ -34,17 +32,16 @@ Object Class::newObject(const Class::Constructor::ID &id, ...) {
 
 // void specialization
 
-template <> const char * Class::Field<Nop>::Signature::value = "";
-template <> const char * Class::Field<void>::Signature::value = "V";
+template <> const char * Class::Static::Field<Nop>::Signature::value = "";
+template <> const char * Class::Static::Field<void>::Signature::value = "V";
 
 // jstring specialization
-template <> const char * Class::Field<jstring   >::Signature::value = "Ljava/lang/String;";
-template <> const char * Class::Field<jstring []>::Signature::value = "[Ljava/lang/String;";
+template <> const char * Class::Static::Field<jstring   >::Signature::value = "Ljava/lang/String;";
+template <> const char * Class::Static::Field<jstring []>::Signature::value = "[Ljava/lang/String;";
 
 template <>
 Array<jstring>::Array(const Env &env, jsize count, jstring string)
     : Env(env), array(env->NewObjectArray(count, Class(env, "java.lang.String"), string)) {}
-
 
 // ...
 
@@ -97,29 +94,29 @@ Array<jobject[]>::Element::operator Array<jobject> () const {
 }
 
 template <>
-Class::Field<jobject>::Reference::operator jobject () const {
+Class::Static::Field<jobject>::Reference::operator jobject () const {
     return (*this)->GetStaticObjectField(*this, *this);
 }
 
 template <>
-Class::Field<jobject>::Reference &
-Class::Field<jobject>::Reference::operator = (const jobject &value) {
+Class::Static::Field<jobject>::Reference &
+Class::Static::Field<jobject>::Reference::operator = (const jobject &value) {
     return (*this)->SetStaticObjectField(*this, *this, value), *this;
 }
 
 template <>
-jobject Class::Method<jobject>::Reference::call(va_list vl) const {
+jobject Class::Static::Method<jobject>::Reference::call(va_list vl) const {
     return (*this)->CallStaticObjectMethodV(*this, *this, vl);
 }
 
 template <>
-Class::Field<jobject[]>::Reference::operator Array<jobject> () const {
+Class::Static::Field<jobject[]>::Reference::operator Array<jobject> () const {
     return Array<jobject>(*this, (jobjectArray) (*this)->GetStaticObjectField(*this, *this));
 }
 
 template <>
-Class::Field<jobject[]>::Reference &
-Class::Field<jobject[]>::Reference::operator = (const Array<jobject> &value) {
+Class::Static::Field<jobject[]>::Reference &
+Class::Static::Field<jobject[]>::Reference::operator = (const Array<jobject> &value) {
     return (*this)->SetStaticObjectField(*this, *this, value), *this;
 }
 
@@ -132,6 +129,11 @@ template <>
 Object::Field<jobject>::Reference &
 Object::Field<jobject>::Reference::operator = (const jobject &value) {
     return (*this)->SetObjectField(*this, *this, value), *this;
+}
+
+template <>
+jobject Class::Method<jobject>::Reference::call(va_list vl) const {
+    return (*this)->CallNonvirtualObjectMethodV(*this, *this, *this, vl);
 }
 
 template <>
@@ -150,14 +152,20 @@ Object::Field<jobject[]>::Reference::operator = (const Array<jobject> &value) {
     return (*this)->SetStaticObjectField(*this, *this, value), *this;
 }
 
+template <>
+Array<jobject> Class::Method<jobject[]>::Reference::call(va_list vl) const {
+    return Array<jobject>(*this, (jobjectArray)(*this)->CallNonvirtualObjectMethodV(*this, *this, *this, vl));
+}
 
 template <>
 Array<jobject> Object::Method<jobject[]>::Reference::call(va_list vl) const {
     return Array<jobject>(*this, (jobjectArray)(*this)->CallObjectMethodV(*this, *this, vl));
 }
 
-
 // jint specialization
+
+template <> const char * Class::Static::Field<jint>::Signature::value = "I";
+template <> const char * Class::Static::Field<jint[]>::Signature::value = "[I";
 
 template <>
 Array<jint>::Array(const Env &env, jsize count)
@@ -177,7 +185,7 @@ Array<jint>::Elements::operator = (const jint *values) {
 template <>
 Array<jint[]>::Array(const Env &env, jsize count)
     : Env(env), array(env->NewObjectArray(count,
-        Class(env, Class::Field<jint[]>::Signature()), 0)) {}
+        Class(env, Class::Static::Field<jint[]>::Signature()), 0)) {}
 
 template <>
 Array<jint[]>::Element &
@@ -198,38 +206,35 @@ Array<jint[]>::Element::operator Array<jint> () const {
     return Array<jint>(*this, (jintArray)(*this)->GetObjectArrayElement(*this, index));
 }
 
-template <> const char * Class::Field<jint      >::Signature::value = "I";
-template <> const char * Class::Field<jint    []>::Signature::value = "[I";
-
 template <>
-Class::Field<jint>::Reference::operator jint () const {
+Class::Static::Field<jint>::Reference::operator jint () const {
     return (*this)->GetStaticIntField(*this, *this);
 }
 
 template <>
-Class::Field<jint>::Reference &
-Class::Field<jint>::Reference::operator = (const jint &value) {
+Class::Static::Field<jint>::Reference &
+Class::Static::Field<jint>::Reference::operator = (const jint &value) {
     return (*this)->SetStaticIntField(*this, *this, value), *this;
 }
 
 template <>
-Class::Field<jint[]>::Reference::operator Array<jint> () const {
+Class::Static::Field<jint[]>::Reference::operator Array<jint> () const {
     return Array<jint>(*this, (jintArray)(*this)->GetStaticObjectField(*this, *this));
 }
 
 template <>
-Class::Field<jint[]>::Reference &
-Class::Field<jint[]>::Reference::operator = (const Array<jint> &value) {
+Class::Static::Field<jint[]>::Reference &
+Class::Static::Field<jint[]>::Reference::operator = (const Array<jint> &value) {
     return (*this)->SetStaticObjectField(*this, *this, value), *this;
 }
 
 template <>
-Array<jint> Class::Method<jint[]>::Reference::call(va_list vl) const {
+Array<jint> Class::Static::Method<jint[]>::Reference::call(va_list vl) const {
     return Array<jint>(*this, (jintArray)(*this)->CallStaticObjectMethodV(*this, *this, vl));
 }
 
 template <>
-jint Class::Method<jint>::Reference::call(va_list vl) const {
+jint Class::Static::Method<jint>::Reference::call(va_list vl) const {
     return (*this)->CallStaticIntMethodV(*this, *this, vl);
 }
 
@@ -256,8 +261,18 @@ Object::Field<jint[]>::Reference::operator = (const Array<jint> &value) {
 }
 
 template <>
+jint Class::Method<jint>::Reference::call(va_list vl) const {
+    return (*this)->CallNonvirtualIntMethodV(*this, *this, *this, vl);
+}
+
+template <>
 jint Object::Method<jint>::Reference::call(va_list vl) const {
     return (*this)->CallIntMethodV(*this, *this, vl);
+}
+
+template <>
+Array<jint> Class::Method<jint[]>::Reference::call(va_list vl) const {
+    return Array<jint>(*this, (jintArray)(*this)->CallNonvirtualObjectMethodV(*this, *this, *this, vl));
 }
 
 template <>
@@ -267,21 +282,40 @@ Array<jint> Object::Method<jint[]>::Reference::call(va_list vl) const {
 
 // jXXX specialization
 
-template <> const char * Class::Field<jboolean  >::Signature::value = "Z";
-template <> const char * Class::Field<jbyte     >::Signature::value = "B";
-template <> const char * Class::Field<jchar     >::Signature::value = "C";
-template <> const char * Class::Field<jshort    >::Signature::value = "S";
-template <> const char * Class::Field<jlong     >::Signature::value = "J";
-template <> const char * Class::Field<jfloat    >::Signature::value = "F";
-template <> const char * Class::Field<jdouble   >::Signature::value = "D";
+template <> const char * Class::Static::Field<jboolean>::Signature::value = "Z";
+template <> const char * Class::Static::Field<jboolean[]>::Signature::value = "[Z";
 
-template <> const char * Class::Field<jboolean[]>::Signature::value = "[Z";
-template <> const char * Class::Field<jbyte   []>::Signature::value = "[B";
-template <> const char * Class::Field<jchar   []>::Signature::value = "[C";
-template <> const char * Class::Field<jshort  []>::Signature::value = "[S";
-template <> const char * Class::Field<jlong   []>::Signature::value = "[J";
-template <> const char * Class::Field<jfloat  []>::Signature::value = "[F";
-template <> const char * Class::Field<jdouble []>::Signature::value = "[D";
+// ...
+
+template <> const char * Class::Static::Field<jbyte>::Signature::value = "B";
+template <> const char * Class::Static::Field<jbyte[]>::Signature::value = "[B";
+
+// ...
+
+template <> const char * Class::Static::Field<jchar>::Signature::value = "C";
+template <> const char * Class::Static::Field<jchar[]>::Signature::value = "[C";
+
+// ...
+
+template <> const char * Class::Static::Field<jshort>::Signature::value = "S";
+template <> const char * Class::Static::Field<jshort[]>::Signature::value = "[S";
+
+// ...
+
+template <> const char * Class::Static::Field<jlong>::Signature::value = "J";
+template <> const char * Class::Static::Field<jlong[]>::Signature::value = "[J";
+
+// ...
+
+template <> const char * Class::Static::Field<jfloat>::Signature::value = "F";
+template <> const char * Class::Static::Field<jfloat[]>::Signature::value = "[F";
+
+// ...
+
+template <> const char * Class::Static::Field<jdouble>::Signature::value = "D";
+template <> const char * Class::Static::Field<jdouble[]>::Signature::value = "[D";
+
+// ...
 
 
 } // namespace JNI
