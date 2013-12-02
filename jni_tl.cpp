@@ -52,14 +52,6 @@ Array<jobject>::Array(const Env &env, jsize count, jclass clazz, jobject object)
     : Env(env), array(env->NewObjectArray(count, clazz, object)) {}
 
 template <>
-Array<jobject>::Elements &
-Array<jobject>::Elements::operator = (const jobject *values) {
-    for (jsize i = 0; i < Region::length; ++i) {
-        (*this)[Region::start + i] = values[i];
-    } return *this;
-}
-
-template <>
 Array<jobject>::Element::operator jobject () const {
     return (*this)->GetObjectArrayElement(*this, index);
 }
@@ -78,14 +70,6 @@ template <>
 Array<jobject[]>::Element &
 Array<jobject[]>::Element::operator = (const jobjectArray &value) {
     return (*this)->SetObjectArrayElement(*this, index, value), *this;
-}
-
-template <>
-Array<jobject[]>::Elements &
-Array<jobject[]>::Elements::operator = (const jobjectArray *values) {
-    for (jsize i = 0; i < Region::length; ++i) {
-        (*this)[Region::start + i] = values[i];
-    } return *this;
 }
 
 template <>
@@ -172,8 +156,13 @@ Array<jint>::Array(const Env &env, jsize count)
     : Env(env), array(env->NewIntArray(count)) {}
 
 template <>
-jint *Array<jint>::Elements::array() const {
-    return (*this)->GetIntArrayElements(*this, 0);
+void Array<jint>::Elements::init() {
+    elements = (*this)->GetIntArrayElements(*this, 0);
+}
+
+template <>
+void Array<jint>::Elements::release() {
+    (*this)->ReleaseIntArrayElements(*this, elements, JNI_ABORT);
 }
 
 template <>
@@ -191,14 +180,6 @@ template <>
 Array<jint[]>::Element &
 Array<jint[]>::Element::operator = (const jintArray &value) {
     return (*this)->SetObjectArrayElement(*this, index, value), *this;
-}
-
-template <>
-Array<jint[]>::Elements &
-Array<jint[]>::Elements::operator = (const jintArray *values) {
-    for (jsize i = 0; i < Region::length; ++i) {
-        (*this)[Region::start + i] = values[i];
-    } return *this;
 }
 
 template <>

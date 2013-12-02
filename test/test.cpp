@@ -17,13 +17,13 @@ void Test::execute() {
 
     Class &clazz = *this;
 
-    String(*this, "some string");
-    String(*this, std::string("some string"));
-    String(*this, jstring(String(*this, "some string")));
+    (std::string)String(*this, "some string");
+    (std::string)String(*this, std::string("some string"));
+    (std::string)String(*this, jstring(String(*this, "some string")));
 
-    clazz.string("some string");
-    clazz.string(std::string("some string"));
-    clazz.string(jstring(clazz.string("some string")));
+    (std::string)clazz.string("some string");
+    (std::string)clazz.string(std::string("some string"));
+    (std::string)clazz.string(jstring(clazz.string("some string")));
 
     (*this).string("some string");
     (*this).string(std::string("some string"));

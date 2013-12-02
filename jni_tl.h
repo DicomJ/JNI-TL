@@ -29,9 +29,13 @@ struct String : Env {
 
     template <typename Char> unsigned length() const;
 
-    operator std::string () const { return (*this)->GetStringUTFChars(string, 0); }
-    operator const char * () const { return (*this)->GetStringUTFChars(string, 0); }
-    operator const jchar * () const { return (*this)->GetStringChars(string, 0); }
+    operator std::string () const {
+        const char * cstr = (*this)->GetStringUTFChars(string, 0);
+        std::string result = cstr;
+        (*this)->ReleaseStringUTFChars(string, cstr);
+        return result;
+    }
+
     operator jstring () const { return string; }
     private: jstring string;
 };
@@ -95,22 +99,45 @@ struct Array<T>::Elements : protected Array<T>, protected Region {
     typedef typename CastOutput<T>::Type Output;
 
     Elements(const Array<T> &array, const Region &region)
-        : Array<T>(array), Region(region), elements(0) {}
+        : Array<T>(array), Region(region), elements(0), reference(true) {}
 
     Element operator[] (int index) { return Element(*this, start + index); }
     const Element operator[] (int index) const { return Element(*this, start + index); }
 
-    Elements &operator = (const Input *values);
+    Elements &operator = (const Input *values) {
+        for (jsize i = 0; i < Region::length; ++i) {
+            (*this)[Region::start + i] = values[i];
+        } return *this;
+    }
 
-    operator T *() const { return elements != 0 ? elements : this->array(); }
-    private: T *array() const;
+    Elements(const Elements &elements, bool reference = false) :
+        Array<T>(elements), Region(elements),
+        elements(elements.elements), reference(reference) {
+        if (!reference) { const_cast<Elements &>(elements).reference = true; }
+    }
+    Elements &operator = (const Elements &elements) {
+        static_cast<Array<T> &>(*this) = elements;
+        static_cast<Region &>(*this) = elements;
+        elements = elements.elements;
+        reference = elements.reference; elements.reference = true;
+        return *this;
+    }
+    ~Elements() {
+        if (!reference && elements != 0) { release(); }
+    }
+    operator T *() const {
+        return elements != 0 ? elements : (reference = false, init(), elements);
+    }
+    private: void init();
+    private: void release() {}
     private: T *elements;
+    private: bool reference;
 };
 
 template <typename T>
 struct Array<T>::Element : protected Elements {
 
-    Element(const Elements &elements, int index) : Elements(elements), index(index) {}
+    Element(const Elements &elements, int index) : Elements(elements, true), index(index) {}
 
     operator typename Elements::Output () const { return ((T *)(*this))[index]; }
     Element &operator = (const typename Elements::Input &value) {
@@ -133,10 +160,13 @@ Array<jobject[]>::Element &
 Array<jobject[]>::Element::operator = (const jobjectArray &value);
 
 template <>
+void Array<jint>::Elements::release();
+template <>
 Array<jint[]>::Element::operator Array<jint> () const;
 template <>
 Array<jint[]>::Element &
 Array<jint[]>::Element::operator = (const jintArray &value);
+
 // type[] ...
 
 struct Class : Env {
