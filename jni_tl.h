@@ -216,6 +216,11 @@ struct Class : Env {
         return (*this)->GetMethodID(*this, name, sig);
     }
 
+//    template <typename T>
+//    typename Static::Field<T>::ID operator() (const typename Static::Field<T> &field) const {
+//        return typename Static::Field<T>::ID(*this, field);
+//    }
+
     template <typename Constructor>
     typename Constructor::Result newObject(const Constructor &constructor, ...);
 
