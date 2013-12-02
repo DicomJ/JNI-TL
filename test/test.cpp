@@ -10,10 +10,39 @@ struct Test : Object {
     Test(JNIEnv *env, jobject object)
         : Object(Class(env, jclass("com.test")), object) {}
     void execute();
-
+    void testString();
+    void testArray();
     template <typename T> void testField();
     template <typename T> void testMethod();
 };
+
+void Test::testString() {
+
+    Class &clazz = *this;
+
+    (std::string)String(*this, "some string");
+    (std::string)String(*this, std::string("some string"));
+    (std::string)String(*this, jstring(String(*this, "some string")));
+
+    (std::string)clazz.string("some string");
+    (std::string)clazz.string(std::string("some string"));
+    (std::string)clazz.string(jstring(clazz.string("some string")));
+
+    (*this).string("some string");
+    (*this).string(std::string("some string"));
+    (*this).string(jstring((*this).string("some string")));
+}
+
+void Test::testArray() {
+    Class &clazz = *this;
+//    {
+//        (Array<jobject>)(Array<jobject[]>(*this, 10, clazz, 0)[Region(3)][0]);
+//        Array<jobject[]>(*this, 10, clazz, 0)[Region(3)][0] = Array<jobject>(*this, 10, clazz, 0);
+
+//        (Array<jint>)(Array<jint[]>(*this, 10)[Region(3)][0]);
+//        Array<jint[]>(*this, 10)[Region(3)][0] = Array<jint>(*this, 10);
+//    }
+}
 
 template<typename T>
 void Test::testField() {
@@ -59,7 +88,12 @@ void Test::testField() {
 
 template <typename T>
 void Test::testMethod() {
+
     Class &clazz = *this;
+    {
+        std::string args = Args<jint, jint, jint, jint, jint, jint, jint, jint, jint, jint>();
+        args = (const std::string &)Args<jobject, jobject[], jint, jint[]>("lang.String", "lang.Object");
+    }
 
     {
         Static::Method<T> method("method_name", Args<jobject>("lang.String"));
@@ -115,41 +149,13 @@ void Test::testMethod() {
 }
 
 void Test::execute() {
-
-    testField<jint>();
-    testMethod<jint>();
-
-    Class &clazz = *this;
-
-    (std::string)String(*this, "some string");
-    (std::string)String(*this, std::string("some string"));
-    (std::string)String(*this, jstring(String(*this, "some string")));
-
-    (std::string)clazz.string("some string");
-    (std::string)clazz.string(std::string("some string"));
-    (std::string)clazz.string(jstring(clazz.string("some string")));
-
-    (*this).string("some string");
-    (*this).string(std::string("some string"));
-    (*this).string(jstring((*this).string("some string")));
-
-    std::string args = Args<jint, jint, jint, jint, jint, jint, jint, jint, jint, jint>();
-    args = (const std::string &)Args<jobject, jobject[], jint, jint[]>("lang.String", "lang.Object");
+    if (false) testString();
+    if (false) testField<jint>();
+    if (false) testMethod<jint>();
 }
 
-JNIEXPORT void JNICALL Java_Application_test(JNIEnv *env, jclass clazz) {
-    if (false) Test(0, 0).execute();
-
-    {
-        (Array<jobject>)(Array<jobject[]>(env, 10, clazz, 0)[Region(3)][0]);
-        Array<jobject[]>(env, 10, clazz, 0)[Region(3)][0] = Array<jobject>(env, 10, clazz, 0);
-
-        (Array<jint>)(Array<jint[]>(env, 10)[Region(3)][0]);
-        Array<jint[]>(env, 10)[Region(3)][0] = Array<jint>(env, 10);
-
-
-        // ...
-    }
+JNIEXPORT void JNICALL Java_Application_test(JNIEnv *env, jclass) {
+    Test(env, 0).execute();
 }
 
 int main() {

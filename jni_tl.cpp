@@ -51,31 +51,31 @@ template <>
 Array<jobject>::Array(const Env &env, jsize count, jclass clazz, jobject object)
     : Env(env), array(env->NewObjectArray(count, clazz, object)) {}
 
-template <>
-Array<jobject>::Element::operator jobject () const {
-    return (*this)->GetObjectArrayElement(*this, index);
-}
+//template <>
+//Array<jobject>::Element::operator jobject () const {
+//    return (*this)->GetObjectArrayElement(*this, index);
+//}
 
-template <>
-Array<jobject>::Element &
-Array<jobject>::Element::operator = (const jobject &object) {
-    return (*this)->SetObjectArrayElement(*this, index, object), *this;
-}
+//template <>
+//Array<jobject>::Element &
+//Array<jobject>::Element::operator = (const jobject &object) {
+//    return (*this)->SetObjectArrayElement(*this, index, object), *this;
+//}
 
-template <>
-Array<jobject[]>::Array(const Env &env, jsize count, jclass clazz, jobject object)
-    : Env(env), array(env->NewObjectArray(count, clazz, object)) {}
+//template <>
+//Array<jobject[]>::Array(const Env &env, jsize count, jclass clazz, jobject object)
+//    : Env(env), array(env->NewObjectArray(count, clazz, object)) {}
 
-template <>
-Array<jobject[]>::Element &
-Array<jobject[]>::Element::operator = (const jobjectArray &value) {
-    return (*this)->SetObjectArrayElement(*this, index, value), *this;
-}
+//template <>
+//Array<jobject[]>::Element &
+//Array<jobject[]>::Element::operator = (const jobjectArray &value) {
+//    return (*this)->SetObjectArrayElement(*this, index, value), *this;
+//}
 
-template <>
-Array<jobject[]>::Element::operator Array<jobject> () const {
-    return Array<jobject>(*this, (jobjectArray)(*this)->GetObjectArrayElement(*this, index));
-}
+//template <>
+//Array<jobject[]>::Element::operator Array<jobject> () const {
+//    return Array<jobject>(*this, (jobjectArray)(*this)->GetObjectArrayElement(*this, index));
+//}
 
 template <>
 Class::Static::Field<jobject>::Reference::operator jobject () const {
@@ -155,42 +155,42 @@ template <>
 Array<jint>::Array(const Env &env, jsize count)
     : Env(env), array(env->NewIntArray(count)) {}
 
-template <>
-void Array<jint>::Elements::init() {
-    elements = (*this)->GetIntArrayElements(*this, 0);
-}
+//template <>
+//void Array<jint>::Elements::init() {
+//    elements = (*this)->GetIntArrayElements(*this, 0);
+//}
 
-template <>
-void Array<jint>::Elements::release() {
-    (*this)->ReleaseIntArrayElements(*this, elements, JNI_ABORT);
-}
+//template <>
+//void Array<jint>::Elements::release() {
+//    (*this)->ReleaseIntArrayElements(*this, elements, JNI_ABORT);
+//}
 
-template <>
-Array<jint>::Elements &
-Array<jint>::Elements::operator = (const jint *values) {
-    return (*this)->SetIntArrayRegion(*this, Region::start, Region::length, values), *this;
-}
+//template <>
+//Array<jint>::Elements &
+//Array<jint>::Elements::operator = (const jint *values) {
+//    return (*this)->SetIntArrayRegion(*this, Region::start, Region::length, values), *this;
+//}
 
 template <>
 Array<jint[]>::Array(const Env &env, jsize count)
     : Env(env), array(env->NewObjectArray(count,
         Class(env, Class::Static::Field<jint[]>::Signature()), 0)) {}
 
-template <>
-Array<jint[]>::Element &
-Array<jint[]>::Element::operator = (const jintArray &value) {
-    return (*this)->SetObjectArrayElement(*this, index, value), *this;
-}
+//template <>
+//Array<jint[]>::Element &
+//Array<jint[]>::Element::operator = (const jintArray &value) {
+//    return (*this)->SetObjectArrayElement(*this, index, value), *this;
+//}
 
-template <>
-Array<jint[]>::Element::operator Array<jint> () const {
-    return Array<jint>(*this, (jintArray)(*this)->GetObjectArrayElement(*this, index));
-}
+//template <>
+//Array<jint[]>::Element::operator Array<jint> () const {
+//    return Array<jint>(*this, (jintArray)(*this)->GetObjectArrayElement(*this, index));
+//}
 
-template <>
-Class::Static::Field<jint>::Reference::operator jint () const {
-    return (*this)->GetStaticIntField(*this, *this);
-}
+//template <>
+//Class::Static::Field<jint>::Reference::operator jint () const {
+//    return (*this)->GetStaticIntField(*this, *this);
+//}
 
 template <>
 Class::Static::Field<jint>::Reference &

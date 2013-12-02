@@ -68,6 +68,8 @@ struct Array : Env {
 
     struct Element;
     struct Elements;
+    struct Critical { struct Elements; };
+    struct Range { struct Elements; };
 
     jsize length() const { return (*this)->GetArrayLength(array); }
 
@@ -76,8 +78,13 @@ struct Array : Env {
     Array(const Env &env, jsize count, jclass clazz, jobject object = 0);
     Array(const Env &env, jsize count, jstring string);
 
-    Elements operator[] (const Region &region) { return Elements(*this, region); }
-    const Elements operator[] (const Region &region) const { return Elements(*this, region); }
+    Elements elements(bool copyBack = false);
+    const Elements elements(bool copyBack = false) const;
+    Elements critical(bool copyBack = false);
+    const Elements critical(bool copyBack = false) const;
+
+    Range::Elements operator[] (const Region &region);/* { return Elements(*this, region); }*/
+    const Range::Elements operator[] (const Region &region) const;/* { return Elements(*this, region); }*/
 
     Element operator[] (int index) { return (*this)[index]; }
     const Element operator[] (int index) const { return (*this)[index]; }
@@ -86,88 +93,88 @@ struct Array : Env {
     private: Type array;
 };
 
-template <typename T>
-struct Array<T>::Elements : protected Array<T>, protected Region {
+//template <typename T>
+//struct Array<T>::Elements : protected Array<T>, protected Region {
 
-    template <typename C, typename U = void> struct CastInput { typedef T Type;};
-    template <typename C, typename U> struct CastInput<C[], U> { typedef typename Array<T>::template Cast<C>::Type Type; };
+//    template <typename C, typename U = void> struct CastInput { typedef T Type;};
+//    template <typename C, typename U> struct CastInput<C[], U> { typedef typename Array<T>::template Cast<C>::Type Type; };
 
-    template <typename C, typename U = void> struct CastOutput { typedef T Type; };
-    template <typename C, typename U> struct CastOutput<C[], U> { typedef Array<C> Type; };
+//    template <typename C, typename U = void> struct CastOutput { typedef T Type; };
+//    template <typename C, typename U> struct CastOutput<C[], U> { typedef Array<C> Type; };
 
-    typedef typename CastInput <T>::Type Input;
-    typedef typename CastOutput<T>::Type Output;
+//    typedef typename CastInput <T>::Type Input;
+//    typedef typename CastOutput<T>::Type Output;
 
-    Elements(const Array<T> &array, const Region &region)
-        : Array<T>(array), Region(region), elements(0), reference(true) {}
+//    Elements(const Array<T> &array, const Region &region)
+//        : Array<T>(array), Region(region), elements(0), reference(true) {}
 
-    Element operator[] (int index) { return Element(*this, start + index); }
-    const Element operator[] (int index) const { return Element(*this, start + index); }
+//    Element operator[] (int index) { return Element(*this, start + index); }
+//    const Element operator[] (int index) const { return Element(*this, start + index); }
 
-    Elements &operator = (const Input *values) {
-        for (jsize i = 0; i < Region::length; ++i) {
-            (*this)[Region::start + i] = values[i];
-        } return *this;
-    }
+//    Elements &operator = (const Input *values) {
+//        for (jsize i = 0; i < Region::length; ++i) {
+//            (*this)[Region::start + i] = values[i];
+//        } return *this;
+//    }
 
-    Elements(const Elements &elements, bool reference = false) :
-        Array<T>(elements), Region(elements),
-        elements(elements.elements), reference(reference) {
-        if (!reference) { const_cast<Elements &>(elements).reference = true; }
-    }
-    Elements &operator = (const Elements &elements) {
-        static_cast<Array<T> &>(*this) = elements;
-        static_cast<Region &>(*this) = elements;
-        elements = elements.elements;
-        reference = elements.reference; elements.reference = true;
-        return *this;
-    }
-    ~Elements() {
-        if (!reference && elements != 0) { release(); }
-    }
-    operator T *() const {
-        return elements != 0 ? elements : (reference = false, init(), elements);
-    }
-    private: void init();
-    private: void release() {}
-    private: T *elements;
-    private: bool reference;
-};
+//    Elements(const Elements &elements, bool reference = false) :
+//        Array<T>(elements), Region(elements),
+//        elements(elements.elements), reference(reference) {
+//        if (!reference) { const_cast<Elements &>(elements).reference = true; }
+//    }
+//    Elements &operator = (const Elements &elements) {
+//        static_cast<Array<T> &>(*this) = elements;
+//        static_cast<Region &>(*this) = elements;
+//        elements = elements.elements;
+//        reference = elements.reference; elements.reference = true;
+//        return *this;
+//    }
+//    ~Elements() {
+//        if (!reference && elements != 0) { release(); }
+//    }
+//    operator T *() const {
+//        return elements != 0 ? elements : (reference = false, init(), elements);
+//    }
+//    private: void init();
+//    private: void release() {}
+//    private: T *elements;
+//    private: bool reference;
+//};
 
-template <typename T>
-struct Array<T>::Element : protected Elements {
+//template <typename T>
+//struct Array<T>::Element : protected Elements {
 
-    Element(const Elements &elements, int index) : Elements(elements, true), index(index) {}
+//    Element(const Elements &elements, int index) : Elements(elements, true), index(index) {}
 
-    operator typename Elements::Output () const { return ((T *)(*this))[index]; }
-    Element &operator = (const typename Elements::Input &value) {
-        return ((static_cast<Array<T> &>(*this))[Region(index)] = &value), *this;
-    }
+//    operator typename Elements::Output () const { return ((T *)(*this))[index]; }
+//    Element &operator = (const typename Elements::Input &value) {
+//        return ((static_cast<Array<T> &>(*this))[Region(index)] = &value), *this;
+//    }
 
-    private: int index;
-};
+//    private: int index;
+//};
 
-template <> // Just to solve specialization after instantiation error
-Array<jobject>::Element::operator jobject () const;
-template <>
-Array<jobject>::Element &
-Array<jobject>::Element::operator = (const jobject &);
+//template <> // Just to solve specialization after instantiation error
+//Array<jobject>::Element::operator jobject () const;
+//template <>
+//Array<jobject>::Element &
+//Array<jobject>::Element::operator = (const jobject &);
 
-template <>
-Array<jobject[]>::Element::operator Array<jobject> () const;
-template <>
-Array<jobject[]>::Element &
-Array<jobject[]>::Element::operator = (const jobjectArray &value);
+//template <>
+//Array<jobject[]>::Element::operator Array<jobject> () const;
+//template <>
+//Array<jobject[]>::Element &
+//Array<jobject[]>::Element::operator = (const jobjectArray &value);
 
-template <>
-void Array<jint>::Elements::release();
-template <>
-Array<jint[]>::Element::operator Array<jint> () const;
-template <>
-Array<jint[]>::Element &
-Array<jint[]>::Element::operator = (const jintArray &value);
+//template <>
+//void Array<jint>::Elements::release();
+//template <>
+//Array<jint[]>::Element::operator Array<jint> () const;
+//template <>
+//Array<jint[]>::Element &
+//Array<jint[]>::Element::operator = (const jintArray &value);
 
-// type[] ...
+//// type[] ...
 
 struct Class : Env {
 
