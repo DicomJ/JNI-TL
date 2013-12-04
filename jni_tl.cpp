@@ -156,6 +156,17 @@ Array<jint>::Array(const Env &env, jsize count)
     : Env(env), array(env->NewIntArray(count)) {}
 
 template <>
+void Array<jint>::Region::Elements::get() {
+    (*this)->GetIntArrayRegion(*this, JNI::Region::start, JNI::Region::length, region);
+}
+
+template <>
+Array<jint>::Region::Elements &
+Array<jint>::Region::Elements::operator = (const jint *values) {
+    return (*this)->SetIntArrayRegion(*this, JNI::Region::start, JNI::Region::length, values), *this;
+}
+
+template <>
 Array<jint[]>::Array(const Env &env, jsize count)
     : Env(env), array(env->NewObjectArray(count,
         Class(env, Class::Static::Field<jint[]>::Signature()), 0)) {}

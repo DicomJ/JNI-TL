@@ -77,7 +77,7 @@ struct Array : Env {
 
     struct Elements;
     struct Critical { struct Elements; };
-    struct Range { struct Elements; };
+    struct Region { struct Elements; };
     struct Object { struct Element; };
 
     jsize length() const { return (*this)->GetArrayLength(array); }
@@ -92,11 +92,19 @@ struct Array : Env {
     Elements critical(bool copyBack = false);
     const Elements critical(bool copyBack = false) const;
 
-    typename Range::Elements operator[] (const Region &region);
-    const typename Range::Elements operator[] (const Region &region) const;
+    typename Region::Elements operator[] (const JNI::Region &region) {
+        return typename Region::Elements(*this, region);
+    }
+    const typename Region::Elements operator[] (const JNI::Region &region) const {
+        return typename Region::Elements(*this, region);
+    }
 
-    typename Object::Element operator[] (int index) { return Object::Element(*this, index); }
-    const typename Object::Element operator[] (int index) const { return Object::Element(*this, index); }
+    typename Object::Element operator[] (int index) {
+        return typename Object::Element(*this, index);
+    }
+    const typename Object::Element operator[] (int index) const {
+        return typename Object::Element(*this, index);
+    }
 
     operator Type () const { return array; }
     private: Type array;
@@ -113,15 +121,58 @@ struct Array<T>::Object::Element : Array<T> {
 };
 
 template <typename T>
-struct Array<T>::Range::Elements : private Array<T>, private Region {
+struct Array<T>::Region::Elements : private Array<T>, private JNI::Region {
 
+    typedef typename Array<T>::Input Type;
     struct Element;
-    Elements(const Array<T> &array, const Region &region)
-        : Array<T>(array), Region(region) {}
 
-    Elements &operator = (const Array<T>::Input *values);
+    Element operator [] (jsize index) { return Element(*this, index); }
+    const Element operator [] (jsize index) const { return Element(*this, index); }
 
-    private: T *array;
+    void commit() { *this = (Type *)(*this); }
+    Elements &operator = (const Type *values);
+    operator Type * () { return region != 0 ? region :
+                         (region = new Type[JNI::Region::length], get(), region); }
+
+    Elements(const Array<T> &array, const JNI::Region &region)
+        : Array<T>(array), JNI::Region(region), region(0) {}
+    ~Elements() { if (region != 0) { delete [] region; } }
+
+    Elements(const Elements &elements)
+        : Array<T>(static_cast<const Array<T> &>(elements)),
+          JNI::Region(static_cast<const JNI::Region &>(elements)) {
+       if (region != 0) { delete [] region; }
+       region = elements.region; const_cast<Elements &>(elements).region = 0;
+    }
+
+    Elements &operator = (const Elements &elements) {
+        if (this != &elements) {
+            static_cast<Array<T> &>(*this) = static_cast<const Array<T> &>(elements);
+            static_cast<JNI::Region &>(*this) = static_cast<const JNI::Region &>(elements);
+            if (region != 0) { delete [] region; }
+            region = elements.region; const_cast<Elements &>(elements).region = 0;
+        } return *this;
+    }
+
+    private: void get();
+    private: Type *region;
+};
+
+template <typename T>
+struct Array<T>::Region::Elements::Element {
+
+    Element(const Elements &elements, jsize index)
+        : elements(const_cast<Elements &>(elements)), index(index) {}
+
+    operator typename Array<T>::Output () const {
+        return ((typename Elements::Type *)elements)[index];
+    }
+    Element &operator = (const typename Array<T>::Input &value) {
+        return ((typename Elements::Type *)elements)[index] = value, *this;
+    }
+
+    private: Elements &elements;
+    private: jsize index;
 };
 
 //template <typename T>
@@ -184,24 +235,6 @@ struct Array<T>::Range::Elements : private Array<T>, private Region {
 
 //    private: int index;
 //};
-
-template <> // Just to solve specialization after instantiation error
-Array<jobject>::Object::Element::operator jobject () const;
-template <>
-Array<jobject>::Object::Element &
-Array<jobject>::Object::Element::operator = (const jobject &);
-
-template <>
-Array<jobject[]>::Object::Element::operator Array<jobject> () const;
-template <>
-Array<jobject[]>::Object::Element &
-Array<jobject[]>::Object::Element::operator = (const jobjectArray &value);
-
-template <>
-Array<jint[]>::Object::Element::operator Array<jint> () const;
-template <>
-Array<jint[]>::Object::Element &
-Array<jint[]>::Object::Element::operator = (const jintArray &value);
 
 //// type[] ...
 

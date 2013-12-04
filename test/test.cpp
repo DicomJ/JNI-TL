@@ -11,7 +11,7 @@ struct Test : Object {
         : Object(Class(env, jclass("com.test")), object) {}
     void execute();
     void testString();
-    void testArray();
+    template <typename T> void testArray();
     template <typename T> void testField();
     template <typename T> void testMethod();
 };
@@ -33,8 +33,26 @@ void Test::testString() {
     (*this).string(jstring((*this).string("some string")));
 }
 
+template <typename T>
 void Test::testArray() {
-    Class &clazz = *this;
+
+    {
+        Array<T> array(*this, jsize(10));
+        typename Array<T>::Region::Elements elements = array[Region(0, 5)];
+        (T)elements[jsize(0)];
+        elements[jsize(0)] = T(0);
+        T values[] = { T(0), T(0), T(0) };
+        elements = values;
+        elements.commit();
+    }
+    {
+        Array<T[]> array(*this, jsize(10));
+        array[0] = Array<T>(*this, jsize(10));
+        (Array<T>)array[0];
+    }
+
+
+
 //    {
 //        (Array<jobject>)(Array<jobject[]>(*this, 10, clazz, 0)[Region(3)][0]);
 //        Array<jobject[]>(*this, 10, clazz, 0)[Region(3)][0] = Array<jobject>(*this, 10, clazz, 0);
@@ -43,6 +61,7 @@ void Test::testArray() {
 //        Array<jint[]>(*this, 10)[Region(3)][0] = Array<jint>(*this, 10);
 //    }
 }
+
 
 template<typename T>
 void Test::testField() {
@@ -71,17 +90,17 @@ void Test::testField() {
         typename Static::Field<T[]>::ID fieldID(clazz, field);
         {
             (Array<T>)(*this)[field]; (Array<T>)(*this)[fieldID];
-            (*this)[field] = Array<T>(*this, 0); (*this)[fieldID] = Array<T>(*this, 0);
+            (*this)[field] = Array<T>(*this, jsize(0)); (*this)[fieldID] = Array<T>(*this, jsize(0));
         }{
             (Array<T>)clazz[field]; (Array<T>)clazz[fieldID];
-            clazz[field] = Array<T>(*this, 0); clazz[fieldID] = Array<T>(*this, 0);
+            clazz[field] = Array<T>(*this, jsize(0)); clazz[fieldID] = Array<T>(*this, jsize(0));
         }
     }{
         Field<T[]> field("field_name");
         typename Field<T[]>::ID fieldID(clazz, field);
         {
             (Array<T>)(*this)[field]; (Array<T>)(*this)[fieldID];
-            (*this)[field] = Array<T>(*this, 0); (*this)[fieldID] = Array<T>(*this, 0);
+            (*this)[field] = Array<T>(*this, jsize(0)); (*this)[fieldID] = Array<T>(*this, jsize(0));
         }
     }
 }
@@ -150,6 +169,7 @@ void Test::testMethod() {
 
 void Test::execute() {
     if (false) testString();
+    if (true ) testArray<jint>();
     if (false) testField<jint>();
     if (false) testMethod<jint>();
 }
