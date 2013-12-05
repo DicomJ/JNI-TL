@@ -303,6 +303,8 @@ struct Array<T>::Elements::Element {
     private: jsize index;
 };
 
+struct Object;
+
 struct Class : Env {
 
     struct Static {
@@ -350,10 +352,23 @@ struct Class : Env {
         return (*this)->GetMethodID(*this, name, sig);
     }
 
-//    template <typename T>
-//    typename Static::Field<T>::ID operator() (const typename Static::Field<T> &field) const {
-//        return typename Static::Field<T>::ID(*this, field);
-//    }
+    template <typename T>
+    typename Static::Field<T>::ID operator() (const typename Static::Field<T> &field) const {
+        return typename Static::Field<T>::ID(*this, field);
+    }
+    template <typename T>
+    typename Static::Method<T>::ID operator() (const typename Static::Method<T> &method) const {
+        return typename Static::Method<T>::ID(*this, method);
+    }
+    template <typename T>
+    typename Method<T>::ID operator() (const Method<T> &method) const {
+        return typename Method<T>::ID(*this, method);
+    }
+
+    template <typename Description>
+    typename Description::ID operator() (const Description &desc) const {
+        return typename Description::ID(*this, desc);
+    }
 
     template <typename Constructor>
     typename Constructor::Result newObject(const Constructor &constructor, ...);
@@ -701,16 +716,16 @@ struct Object : Class {
         return Class::operator [] (method);
     }
 
-template <typename ReturnType>
-typename Class::Method<ReturnType>::Reference
-operator [] (const Class::Method<ReturnType> &method) {
-    return typename Class::Method<ReturnType>::Reference(*this, typename Class::Method<ReturnType>::ID(*this, method));
-}
-template <typename ReturnType>
-const typename Class::Method<ReturnType>::Reference
-operator [] (const Class::Method<ReturnType> &method) const {
-    return typename Class::Method<ReturnType>::Reference(*this, Class::Method<ReturnType>::ID(*this, method));
-}
+    template <typename ReturnType>
+    typename Class::Method<ReturnType>::Reference
+    operator [] (const Class::Method<ReturnType> &method) {
+        return typename Class::Method<ReturnType>::Reference(*this, typename Class::Method<ReturnType>::ID(*this, method));
+    }
+    template <typename ReturnType>
+    const typename Class::Method<ReturnType>::Reference
+    operator [] (const Class::Method<ReturnType> &method) const {
+        return typename Class::Method<ReturnType>::Reference(*this, Class::Method<ReturnType>::ID(*this, method));
+    }
 
     template <typename Type>
     typename Field<Type>::Reference

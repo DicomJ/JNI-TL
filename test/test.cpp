@@ -11,27 +11,12 @@ struct Test : Object {
         : Object(Class(env, jclass("com.test")), object) {}
     void execute();
     void testString();
+    void testObject();
     template <typename T> void testArray();
     template <typename T> void testField();
     template <typename T> void testMethod();
+    template <typename T> void testPrimitive();
 };
-
-void Test::testString() {
-
-    Class &clazz = *this;
-
-    (std::string)String(*this, "some string");
-    (std::string)String(*this, std::string("some string"));
-    (std::string)String(*this, jstring(String(*this, "some string")));
-
-    (std::string)clazz.string("some string");
-    (std::string)clazz.string(std::string("some string"));
-    (std::string)clazz.string(jstring(clazz.string("some string")));
-
-    (*this).string("some string");
-    (*this).string(std::string("some string"));
-    (*this).string(jstring((*this).string("some string")));
-}
 
 template <typename T>
 void Test::testArray() {
@@ -68,7 +53,7 @@ void Test::testField() {
     Class &clazz = *this;
     {
         Static::Field<T> field("static_field_name");
-        typename Static::Field<T>::ID fieldID(clazz, field);
+        typename Static::Field<T>::ID fieldID = clazz(field);
         {
             (T)(*this)[field]; (T)(*this)[fieldID];
             (*this)[field] = T(0); (*this)[fieldID] = T(0);
@@ -78,7 +63,7 @@ void Test::testField() {
         }
     }{
         Field<T> field("field_name");
-        typename Field<T>::ID fieldID(clazz, field);
+        typename Field<T>::ID fieldID = clazz(field);
         {
             (T)(*this)[field]; (T)(*this)[fieldID];
             (*this)[field] = T(0); (*this)[fieldID] = T(0);
@@ -87,7 +72,7 @@ void Test::testField() {
     // Array
     {
         Static::Field<T[]> field("static_field_name");
-        typename Static::Field<T[]>::ID fieldID(clazz, field);
+        typename Static::Field<T[]>::ID fieldID = clazz(field);
         {
             (Array<T>)(*this)[field]; (Array<T>)(*this)[fieldID];
             (*this)[field] = Array<T>(*this, jsize(0)); (*this)[fieldID] = Array<T>(*this, jsize(0));
@@ -97,7 +82,7 @@ void Test::testField() {
         }
     }{
         Field<T[]> field("field_name");
-        typename Field<T[]>::ID fieldID(clazz, field);
+        typename Field<T[]>::ID fieldID = clazz(field);
         {
             (Array<T>)(*this)[field]; (Array<T>)(*this)[fieldID];
             (*this)[field] = Array<T>(*this, jsize(0)); (*this)[fieldID] = Array<T>(*this, jsize(0));
@@ -116,7 +101,7 @@ void Test::testMethod() {
 
     {
         Static::Method<T> method("method_name", Args<jobject>("lang.String"));
-        typename Static::Method<T>::ID methodID(clazz, method);
+        typename Static::Method<T>::ID methodID = clazz(method);
         {
             (T)(*this)[method](jobject(0));
             (T)(*this)[methodID](jobject(0));
@@ -126,14 +111,14 @@ void Test::testMethod() {
         }
     }{
         Class::Method<T> method("method_name", Args<jobject>("lang.String"));
-        typename Class::Method<T>::ID methodID(clazz, method);
+        typename Class::Method<T>::ID methodID = clazz(method);
         {
             (T)(*this)[method](jobject(0));
             (T)(*this)[methodID](jobject(0));
         }
     }{
         Method<T> method("method_name", Args<jobject>("lang.String"));
-        typename Method<T>::ID methodID(clazz, method);
+        typename Method<T>::ID methodID = clazz(method);
         {
             (T)(*this)[method](jobject(0));
             (T)(*this)[methodID](jobject(0));
@@ -142,7 +127,7 @@ void Test::testMethod() {
     // Array
     {
         Static::Method<T[]> method("method_name", Args<jobject>("lang.String"));
-        typename Static::Method<T[]>::ID methodID(clazz, method);
+        typename Static::Method<T[]>::ID methodID = clazz(method);
         {
             (Array<T>)(*this)[method](jobject(0));
             (Array<T>)(*this)[methodID](jobject(0));
@@ -152,14 +137,14 @@ void Test::testMethod() {
         }
     }{
         Class::Method<T[]> method("method_name", Args<jobject>("lang.String"));
-        typename Class::Method<T[]>::ID methodID(clazz, method);
+        typename Class::Method<T[]>::ID methodID = clazz(method);
         {
             (Array<T>)(*this)[method](jobject(0));
             (Array<T>)(*this)[methodID](jobject(0));
         }
     }{
         Method<T[]> method("method_name", Args<jobject>("lang.String"));
-        typename Method<T[]>::ID methodID(clazz, method);
+        typename Method<T[]>::ID methodID = clazz(method);
         {
             (Array<T>)(*this)[method](jobject(0));
             (Array<T>)(*this)[methodID](jobject(0));
@@ -167,11 +152,48 @@ void Test::testMethod() {
     }
 }
 
+void Test::testObject() {
+    // ... testPrimitive<object >();
+}
+
+void Test::testString() {
+
+    Class &clazz = *this;
+
+    (std::string)String(*this, "some string");
+    (std::string)String(*this, std::string("some string"));
+    (std::string)String(*this, jstring(String(*this, "some string")));
+
+    (std::string)clazz.string("some string");
+    (std::string)clazz.string(std::string("some string"));
+    (std::string)clazz.string(jstring(clazz.string("some string")));
+
+    (*this).string("some string");
+    (*this).string(std::string("some string"));
+    (*this).string(jstring((*this).string("some string")));
+
+    // ... testPrimitive<string >();
+}
+
+template <typename T>
+void Test::testPrimitive() {
+    bool array = true, field = false, method = false;
+    if (array ) testArray <T>();
+    if (field ) testField <T>();
+    if (method) testMethod<T>();
+}
+
 void Test::execute() {
     if (false) testString();
-    if (true ) testArray<jint>();
-    if (false) testField<jint>();
-    if (false) testMethod<jint>();
+    testObject();
+    testPrimitive<jboolean>();
+    testPrimitive<jchar   >();
+    testPrimitive<jshort  >();
+    testPrimitive<jint    >();
+    testPrimitive<jlong   >();
+    testPrimitive<jbyte   >();
+    testPrimitive<jfloat  >();
+    testPrimitive<jdouble >();
 }
 
 JNIEXPORT void JNICALL Java_Application_test(JNIEnv *env, jclass) {
