@@ -53,7 +53,7 @@ struct Array : Env {
 
     template <typename C, typename U = void> struct Cast {};
     template <typename C,
-              typename U> struct Cast<C[],      U> { typedef jobjectArray Type; };
+              typename U> struct Cast<C[],      U> { typedef  jobjectArray Type; };
     template <typename U> struct Cast<jboolean, U> { typedef jbooleanArray Type; };
     template <typename U> struct Cast<jbyte,    U> { typedef    jbyteArray Type; };
     template <typename U> struct Cast<jchar,    U> { typedef    jcharArray Type; };
@@ -67,8 +67,9 @@ struct Array : Env {
     typedef typename Cast<T>::Type Type;
 
     template <typename C, typename U = void> struct CastInput { typedef T Type;};
-    template <typename C, typename U> struct CastInput<C[], U> { typedef typename Array<T>::template Cast<C>::Type Type; };
-
+    template <typename C, typename U> struct CastInput<C[], U> {
+        typedef typename Array<T>::template Cast<C>::Type Type;
+    };
     template <typename C, typename U = void> struct CastOutput { typedef T Type; };
     template <typename C, typename U> struct CastOutput<C[], U> { typedef Array<C> Type; };
 
@@ -87,10 +88,19 @@ struct Array : Env {
     Array(const Env &env, jsize count, jclass clazz, jobject object = 0);
     Array(const Env &env, jsize count, jstring string);
 
-    Elements elements(bool copyBack = false);
-    const Elements elements(bool copyBack = false) const;
-    Elements critical(bool copyBack = false);
-    const Elements critical(bool copyBack = false) const;
+    Elements elements(bool copyBack = false) {
+        return Elements(*this, copyBack);
+    }
+    const Elements elements(bool copyBack = false) const {
+        return Elements(*this, copyBack);
+    }
+
+    typename Critical::Elements critical(bool copyBack = false) {
+        return typename Critical::Elements(*this, copyBack);
+    }
+    const typename Critical::Elements critical(bool copyBack = false) const {
+        return typename Critical::Elements(*this, copyBack);
+    }
 
     typename Region::Elements operator[] (const JNI::Region &region) {
         return typename Region::Elements(*this, region);
@@ -129,14 +139,10 @@ struct Array<T>::Region::Elements : private Array<T>, private JNI::Region {
     Element operator [] (jsize index) { return Element(*this, index); }
     const Element operator [] (jsize index) const { return Element(*this, index); }
 
-    void commit() { *this = (Type *)(*this); }
-    Elements &operator = (const Type *values);
-    operator Type * () { return region != 0 ? region :
-                         (region = new Type[JNI::Region::length], get(), region); }
+    ~Elements() { if (region != 0) { delete [] region; } }
 
     Elements(const Array<T> &array, const JNI::Region &region)
         : Array<T>(array), JNI::Region(region), region(0) {}
-    ~Elements() { if (region != 0) { delete [] region; } }
 
     Elements(const Elements &elements)
         : Array<T>(static_cast<const Array<T> &>(elements)),
@@ -152,6 +158,14 @@ struct Array<T>::Region::Elements : private Array<T>, private JNI::Region {
             if (region != 0) { delete [] region; }
             region = elements.region; const_cast<Elements &>(elements).region = 0;
         } return *this;
+    }
+
+    Elements &operator = (const Type *values);
+
+    void commit() { *this = (Type *)(*this); }
+    private: operator Type * () {
+        return region != 0 ? region :
+                (region = new Type[JNI::Region::length], get(), region);
     }
 
     private: void get();
@@ -175,68 +189,119 @@ struct Array<T>::Region::Elements::Element {
     private: jsize index;
 };
 
-//template <typename T>
-//struct Array<T>::Elements : protected Array<T>, protected Region {
+template <typename T>
+struct Array<T>::Critical::Elements : private Array<T> {
 
-//    template <typename C, typename U = void> struct CastInput { typedef T Type;};
-//    template <typename C, typename U> struct CastInput<C[], U> { typedef typename Array<T>::template Cast<C>::Type Type; };
+    typedef typename Array<T>::Input Type;
+    struct Element;
 
-//    template <typename C, typename U = void> struct CastOutput { typedef T Type; };
-//    template <typename C, typename U> struct CastOutput<C[], U> { typedef Array<C> Type; };
+    Element operator [] (jsize index) { return Element(*this, index); }
+    const Element operator [] (jsize index) const { return Element(*this, index); }
 
-//    typedef typename CastInput <T>::Type Input;
-//    typedef typename CastOutput<T>::Type Output;
+    Elements(const Array<T> &array, bool copyBack)
+        : Array<T>(array),
+          array((Type *)(*this)->GetPrimitiveArrayCritical(*this, &isCopy)),
+          copyBack(copyBack) {}
+    ~Elements() {
+        (*this)->ReleasePrimitiveArrayCritical(*this, array, copyBack ? 0 : JNI_ABORT);
+    }
 
-//    Elements(const Array<T> &array, const Region &region)
-//        : Array<T>(array), Region(region), elements(0), reference(true) {}
+    Elements(const Elements &elements)
+        : Array<T>(static_cast<const Array<T> &>(elements)),
+          array(elements.array), copyBack(elements.copyBack), isCopy(elements.isCopy) {
+       const_cast<Elements &>(elements).array = 0;
+    }
 
-//    Element operator[] (int index) { return Element(*this, start + index); }
-//    const Element operator[] (int index) const { return Element(*this, start + index); }
+    Elements &operator = (const Elements &elements) {
+        if (this != &elements) {
+            static_cast<Array<T> &>(*this) = static_cast<const Array<T> &>(elements);
+            array = elements.array; const_cast<Elements &>(elements).array = 0;
+            copyBack = elements.copyBack;
+            isCopy = elements.isCopy;
+        } return *this;
+    }
 
-//    Elements &operator = (const Input *values) {
-//        for (jsize i = 0; i < Region::length; ++i) {
-//            (*this)[Region::start + i] = values[i];
-//        } return *this;
-//    }
+    void commit() {
+        (*this)->ReleasePrimitiveArrayCritical(*this, array, JNI_COMMIT);
+    }
 
-//    Elements(const Elements &elements, bool reference = false) :
-//        Array<T>(elements), Region(elements),
-//        elements(elements.elements), reference(reference) {
-//        if (!reference) { const_cast<Elements &>(elements).reference = true; }
-//    }
-//    Elements &operator = (const Elements &elements) {
-//        static_cast<Array<T> &>(*this) = elements;
-//        static_cast<Region &>(*this) = elements;
-//        elements = elements.elements;
-//        reference = elements.reference; elements.reference = true;
-//        return *this;
-//    }
-//    ~Elements() {
-//        if (!reference && elements != 0) { release(); }
-//    }
-//    operator T *() const {
-//        return elements != 0 ? elements : (reference = false, init(), elements);
-//    }
-//    private: void init();
-//    private: void release() {}
-//    private: T *elements;
-//    private: bool reference;
-//};
+    private: operator Type * () { return array; }
+    private: Type *array;
+    private: bool copyBack;
+    private: jboolean isCopy;
+};
 
-//template <typename T>
-//struct Array<T>::Element : protected Elements {
+template <typename T>
+struct Array<T>::Critical::Elements::Element {
 
-//    Element(const Elements &elements, int index) : Elements(elements, true), index(index) {}
+    Element(const Elements &elements, jsize index)
+        : elements(const_cast<Elements &>(elements)), index(index) {}
 
-//    operator typename Elements::Output () const { return ((T *)(*this))[index]; }
-//    Element &operator = (const typename Elements::Input &value) {
-//        return ((static_cast<Array<T> &>(*this))[Region(index)] = &value), *this;
-//    }
+    operator typename Array<T>::Output () const {
+        return ((typename Elements::Type *)elements)[index];
+    }
+    Element &operator = (const typename Array<T>::Input &value) {
+        return ((typename Elements::Type *)elements)[index] = value, *this;
+    }
 
-//    private: int index;
-//};
+    private: Elements &elements;
+    private: jsize index;
+};
 
-//// type[] ...
+template <typename T>
+struct Array<T>::Elements : private Array<T> {
+
+    typedef typename Array<T>::Input Type;
+    struct Element;
+
+    Element operator [] (jsize index) { return Element(*this, index); }
+    const Element operator [] (jsize index) const { return Element(*this, index); }
+
+    Elements(const Array<T> &array, bool copyBack)
+        : Array<T>(array), array(0), copyBack(copyBack) { init(); }
+    ~Elements() { release(); }
+
+    Elements(const Elements &elements)
+        : Array<T>(static_cast<const Array<T> &>(elements)),
+          array(elements.array), copyBack(elements.copyBack), isCopy(elements.isCopy) {
+       const_cast<Elements &>(elements).array = 0;
+    }
+
+    Elements &operator = (const Elements &elements) {
+        if (this != &elements) {
+            static_cast<Array<T> &>(*this) = static_cast<const Array<T> &>(elements);
+            array = elements.array; const_cast<Elements &>(elements).array = 0;
+            copyBack = elements.copyBack;
+            isCopy = elements.isCopy;
+        } return *this;
+    }
+
+    void commit();
+    private: void init();
+    private: void release();
+
+    private: operator Type * () { return array; }
+    private: Type *array;
+    private: bool copyBack;
+    private: jboolean isCopy;
+};
+
+template <typename T>
+struct Array<T>::Elements::Element {
+
+    Element(const Elements &elements, jsize index)
+        : elements(const_cast<Elements &>(elements)), index(index) {}
+
+    operator typename Array<T>::Output () const {
+        return ((typename Elements::Type *)elements)[index];
+    }
+    Element &operator = (const typename Array<T>::Input &value) {
+        return ((typename Elements::Type *)elements)[index] = value, *this;
+    }
+
+    private: Elements &elements;
+    private: jsize index;
+};
 
 struct Class : Env {
 

@@ -38,30 +38,30 @@ void Test::testArray() {
 
     {
         Array<T> array(*this, jsize(10));
+        typename Array<T>::Elements elements = array.elements(true);
+        (T)elements[jsize(0)];
+        elements[jsize(0)] = T(0);
+        elements.commit();
+    }{
+        Array<T> array(*this, jsize(10));
+        typename Array<T>::Critical::Elements elements = array.critical(true);
+        (T)elements[jsize(0)];
+        elements[jsize(0)] = T(0);
+        elements.commit();
+    }{
+        Array<T> array(*this, jsize(10));
         typename Array<T>::Region::Elements elements = array[Region(0, 5)];
         (T)elements[jsize(0)];
         elements[jsize(0)] = T(0);
         T values[] = { T(0), T(0), T(0) };
         elements = values;
         elements.commit();
-    }
-    {
+    }{
         Array<T[]> array(*this, jsize(10));
         array[0] = Array<T>(*this, jsize(10));
         (Array<T>)array[0];
     }
-
-
-
-//    {
-//        (Array<jobject>)(Array<jobject[]>(*this, 10, clazz, 0)[Region(3)][0]);
-//        Array<jobject[]>(*this, 10, clazz, 0)[Region(3)][0] = Array<jobject>(*this, 10, clazz, 0);
-
-//        (Array<jint>)(Array<jint[]>(*this, 10)[Region(3)][0]);
-//        Array<jint[]>(*this, 10)[Region(3)][0] = Array<jint>(*this, 10);
-//    }
 }
-
 
 template<typename T>
 void Test::testField() {

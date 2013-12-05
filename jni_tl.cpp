@@ -156,6 +156,21 @@ Array<jint>::Array(const Env &env, jsize count)
     : Env(env), array(env->NewIntArray(count)) {}
 
 template <>
+void Array<jint>::Elements::init() {
+    array = (*this)->GetIntArrayElements(*this, &isCopy);
+}
+
+template <>
+void Array<jint>::Elements::release() {
+    (*this)->ReleaseIntArrayElements(*this, array, copyBack ? 0 : JNI_ABORT);
+}
+
+template <>
+void Array<jint>::Elements::commit() {
+    (*this)->ReleaseIntArrayElements(*this, array, JNI_COMMIT);
+}
+
+template <>
 void Array<jint>::Region::Elements::get() {
     (*this)->GetIntArrayRegion(*this, JNI::Region::start, JNI::Region::length, region);
 }
