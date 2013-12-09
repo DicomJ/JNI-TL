@@ -352,19 +352,6 @@ struct Class : Env {
         return (*this)->GetMethodID(*this, name, sig);
     }
 
-    template <typename T>
-    typename Static::Field<T>::ID operator() (const typename Static::Field<T> &field) const {
-        return typename Static::Field<T>::ID(*this, field);
-    }
-    template <typename T>
-    typename Static::Method<T>::ID operator() (const typename Static::Method<T> &method) const {
-        return typename Static::Method<T>::ID(*this, method);
-    }
-    template <typename T>
-    typename Method<T>::ID operator() (const Method<T> &method) const {
-        return typename Method<T>::ID(*this, method);
-    }
-
     template <typename Description>
     typename Description::ID operator() (const Description &desc) const {
         return typename Description::ID(*this, desc);
