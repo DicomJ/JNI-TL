@@ -1,3 +1,67 @@
 h1. JNI-TL
 
-h2. C++ Java Native Interface Template Library
+h4. C++ Java Native Interface Template Library
+
+JNI-TL is a lightweight С++ library which facilitates using java objects from C++ code. It's written on top of standard Java Native Inteface 6.0 API (comes with including @<jni.h>@ header file) and merely comprises a few handy wrappers what makes using JNI API easier.
+
+h4. Wrapping @jclass@ an @jobject@
+
+Basic wrappers for @jclass@ and @jobject@ types are represented by corresponding @Class@ and @Object@ C++ classes.
+
+bc.. JNIEnv *jenv; jclass jcls; jobject jobj;
+
+Class clazz(jenv, jcls);
+Object object(clazz, jobj);
+
+h4. Accessing fields and methods
+
+p. @Object@ type inherits @Class@ type and both of them leverage accessing Java object's or/and class's methods and fields in the following way:
+
+bc.. object[<method>](<arguments>)
+
+<value> = object[<field>]
+object[<field>] = <value>
+
+p. or/and
+
+bc.. clazz[<method>](<arguments>)
+
+<value> = clazz[<field>]
+clazz[<field>] = <value>
+
+p. For instance:
+
+bc.. object[Method<jboolean>("equals", Args<jobject>("java.lang.object")](object);
+
+jint value = object[Field<int>("field_name")];
+object[Field<jint>("field_name")] = value;
+
+h4. Fields and methods definitions
+
+bc.. <Specifier>::Field<jtype>("<field_name>")
+<Specifier>::Field<jobject>("<field_name>", "<fully.qualified.field.class.name>")
+
+p. 
+
+bc.. <Specifier>::Method<returned-jtype>("<method_name>", [, <arguments>])
+<Specifier>::Method<jobject>("<method_name>"[, <arguments>], "<fully.qualified.returned.class.name>")
+
+Args<[jtype|jobject,]...>([<fully.qualified.class.name.for.jobject.parameter>], ...)
+
+p. There several kind of @<field>s@ and @<method>s@
+
+|_/2. Field type |_\2. Applicable to |_/2. Description |
+|_. @Class@ |_. @Object@ |
+| @Class::Static::Field@   | Yes | Yes | Accesing class's static fields |
+| @Object::Static::Field@  | Yes | Yes | The same as @Class::Static::Field@ |
+| @Object::Field@          | No  | Yes | Accessing object's fields |
+
+|_/2. Method type |_\2. Applicable to |_/2. Description |
+|_. @Class@ |_. @Object@ |
+| @Class::Static::Method@  | Yes | Yes | Accesing class's static methods |
+| @Class::Method@          | No  | Yes | Accessing non-virtual object's methods of specified class |
+| @Object::Static::Method@ | Yes | Yes | The same as @Class::Static::Method@ |
+| @Object::Method@         | No  | Yes | Accessing object's methods |
+
+
+
