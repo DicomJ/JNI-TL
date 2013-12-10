@@ -16,14 +16,14 @@ Object object(clazz, jobj);
 
 h4. Accessing fields and methods
 
-p. @Object@ type inherits @Class@ type and both of them leverage accessing Java object's or/and class's methods and fields. Objects of these classes are basically maps of fields and methods which might be accessed by their definitions.
+p. @Object@ type inherits @Class@ type and both of them leverage accessing Java object's or/and class's methods and fields. Objects of these classes basically are used as maps of fields and methods which might be accessed by their definitions.
 
 bc.. object[<method>](<arguments>)
 
 <value> = object[<field>]
 object[<field>] = <value>
 
-p. the same is true for @Class@ object
+p. the same for @Class@ object
 
 bc.. clazz[<method>](<arguments>)
 
@@ -32,14 +32,14 @@ clazz[<field>] = <value>
 
 p. Example:
 
-bc.. object[Method<jboolean>("equals", Args<jobject>("java.lang.object")](object);
-
-jint value = object[Field<int>("field_name")];
+bc.. jint value = object[Field<jint>("field_name")];
 object[Field<jint>("field_name")] = value;
+
+object[Method<jboolean>("equals", Args<jobject>("java.lang.Object")](object);
 
 h4. Fields and methods definitions
 
-The @Field@ definition is represented by the name and its type. And when @jobject@ type is a case object's class name is must.
+The @Field@ definition is represented by the name its and type. And when @jobject@ type is a case object's class name is must.
 
 bc.. <Specifier>::Field<jtype>("<field_name>")
 <Specifier>::Field<jobject>("<field_name>", "<fully.qualified.field.class.name>")
@@ -94,7 +94,6 @@ array[i] = si;
 p. 
 
 * accessing all primitive elements
-Writing elements back happens on @Array::Elements@ destructor and only when elements have been acquired with a raised copyBack flag or might be fired manually by calling @commit@ method on @Elements@ object.
 
 bc.. Array<jtype> array(...);
 bool copyBack = false; # Tells whether copy all changes back to array
@@ -102,32 +101,33 @@ bool copyBack = false; # Tells whether copy all changes back to array
 Array<jtype>::Elements elements = array.elements(copyBack);
 jtype value = elements[i];
 elements[i] = value;
-elements.commit();
+
+elements.commit(); # Manually copy elements back to array
 
 p. 
+
+Writing elements back happens on @Array::Elements@ destructor and only when elements have been acquired with a raised copyBack flag or might be fired manually by calling @commit@ method on @Elements@ object.
 
 * accessing all primitive elements with critical restrictions
 
 bc.. Array<jtype>::Critical::Elements elements = array.critical(copyBack);
 jtype value = elements[i];
 elements[i] = value;
-elements.commit();
 
 p. 
 
 * accessing some @Region@ of primitive elements
 Requesting @Region@ allows to access small amount of elements. An index counts elements in the range not from array beginning.
 
-bc.. Array<jtype>::Region::Elements elements = array.region(Range(start, length), copyBack);
+bc.. Array<jtype>::Region::Elements elements = array.region(Region(start, length), copyBack);
 jtype value = elements[i];
 elements[i] = value;
-elements.commit();
 
 p. 
 
 h3. Wrapping @jstring@
 
-@String@ class allows to convert from @jstring@ to std::string and vice versa.
+@String@ class allows to convert from @jstring@ to @std::string@ and vice versa.
 
 bc.. JNIEnv *jenv; jstring jstr;
 
@@ -135,7 +135,98 @@ String string(jenv, jstr);
 std::string stdstr = string;
 jstr = String(jenv, "some native text");
 
-h3. TODO
+h3. Exception handling
 
-* Add exception handling
+bc.. // TBI
 
+p. 
+
+h3. Using JNI-TL
+
+# Add compilation of @jni_tl.cpp@ file into an appropriate project
+# @#include <jni_tl.h>@ header file
+# Whenever it's possible declare @using namespace JNI;@ since all classes are defined under this @namespace@.
+
+
+h3. Best practice
+
+h4. Performance optimization
+
+Accessing @Fields@ or @Methods@ by subscript operator of @Class@ or @Object@ comprises two calls of JNI API functions:
+
+# @GetFieldID/GetStaticFieldID/GetMethodID/GetStaticMethodID@
+# @Get<jtype>Field/Set<jtype>Field/CallStatic<jtype>Method/Call<jtype>Method/CallNonvirtual<jtype>Method@
+
+Example:
+
+bc.. jenv->Set<jtype>Field(object, jenv->GetFieldID(clazz, "field_name", "field_signature"), <value>);
+
+p. Suppose the field is accessed several times
+
+bc.. for (int i = 0; i < N; ++i) {
+  jenv->Set<jtype>Field(object, jenv->GetFieldID(clazz, "field_name", "field_signature"), <value>);
+}
+
+p. In this case code might be optimized
+
+bc.. jfieldID fieldID = jenv->GetFieldID(clazz, "field_name", "field_signature");
+for (int i = 0; i < N; ++i) {
+  jenv->Set<jtype>Field(object, fieldID, <value>);
+}
+
+p. In the similar way might be optimized accesing to @Fields@ and @Methods@
+
+bc.. Object::Field<jtype>::ID fieldID = clazz(Object::Field<jint>("field_name"));
+for (int i = 0; i < N; ++i) {
+  object[fieldID] = <value>;
+}
+
+p. 
+
+h4. Wrapping Java object
+
+The best way access Java object of some class is through a corresponding wrapper which implements necessary functionality and hides JNI specifics. In the most cases wrapper merely inherits JNI::Object and provides a bunch of necessary functions.
+The next example shows how to make wrapper for a part of @java.lang.Integer@ java class and than use it.
+
+bc.. #include "jni_tl.h"
+
+using namespace JNI;
+
+struct Integer : Object {
+
+  Integer(const Env &env, jobject object = 0)
+    : Object(Class("java.lang.Integer"), object) {
+
+    MIN = (*this)[Static::Field<jint>("MIN_VALUE")];
+    MAX = (*this)[Static::Field<jint>("MAX_VALUE")];
+
+    hashCodeID = (*this)(Method<jint>("hashCode"));
+    bitCountID = (*this)(Static::Method<jint>("bitCount", Args<jint>()));
+  }
+
+  jint hashCode() const {
+    return (*this)[hashCodeID]();
+  }
+
+  jint bitCount(jint value) const {
+    return (*this)[bitCountID](value);
+  }
+
+  jint max() const { return MAX; }
+  jint min() const { return MIN; }
+
+  private: jint MAX, MIN;
+
+  private: Method<jint>::ID hashCodeID;
+  private: Static::Method<jint>::ID bitCountID;
+};
+
+void UsingIntegerCodeSnippet(JNIEnv *jenv, jobject jinteger) {
+  Integer integer(jenv, jinteger);
+  jint bits = integer.bitCount(0xF);
+  jint hash = integer.hashCode();
+  jint max = integer.max();
+  jint min = integer.min();
+}
+
+p. 
