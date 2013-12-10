@@ -127,7 +127,8 @@ p.
 
 h3. Wrapping @jstring@
 
-Allows to comvert
+@String@ class allows to convert from @jstring@ to std::string and vice versa.
+
 bc.. JNIEnv *jenv; jstring jstr;
 
 String string(jenv, jstr);
