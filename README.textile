@@ -1,10 +1,11 @@
 h1. JNI-TL
 
-h4. C++ Java Native Interface Template Library
+h3. C++ Java Native Interface Template Library
 
 JNI-TL is a lightweight С++ library which facilitates using java objects from C++ code. It's written on top of standard Java Native Inteface 6.0 API (comes with including @<jni.h>@ header file) and merely comprises a few handy wrappers what makes using JNI API easier.
+For further reading it's expected that reader is familiar with technical aspects of JNI API.
 
-h4. Wrapping @jclass@ an @jobject@
+h3. Wrapping @jclass@ and @jobject@
 
 Basic wrappers for @jclass@ and @jobject@ types are represented by corresponding @Class@ and @Object@ C++ classes.
 
@@ -15,21 +16,21 @@ Object object(clazz, jobj);
 
 h4. Accessing fields and methods
 
-p. @Object@ type inherits @Class@ type and both of them leverage accessing Java object's or/and class's methods and fields in the following way:
+p. @Object@ type inherits @Class@ type and both of them leverage accessing Java object's or/and class's methods and fields. Objects of these classes are basically maps of fields and methods which might be accessed by their definitions.
 
 bc.. object[<method>](<arguments>)
 
 <value> = object[<field>]
 object[<field>] = <value>
 
-p. or/and
+p. the same is true for @Class@ object
 
 bc.. clazz[<method>](<arguments>)
 
 <value> = clazz[<field>]
 clazz[<field>] = <value>
 
-p. For instance:
+p. Example:
 
 bc.. object[Method<jboolean>("equals", Args<jobject>("java.lang.object")](object);
 
@@ -38,30 +39,102 @@ object[Field<jint>("field_name")] = value;
 
 h4. Fields and methods definitions
 
+The @Field@ definition is represented by the name and its type. And when @jobject@ type is a case object's class name is must.
+
 bc.. <Specifier>::Field<jtype>("<field_name>")
 <Specifier>::Field<jobject>("<field_name>", "<fully.qualified.field.class.name>")
 
-p. 
+p. Like @Field@ the @Method@ definition requires both name and type of returned value as well as object's class name when method returns @jobject@ type.
 
 bc.. <Specifier>::Method<returned-jtype>("<method_name>", [, <arguments>])
 <Specifier>::Method<jobject>("<method_name>"[, <arguments>], "<fully.qualified.returned.class.name>")
 
-Args<[jtype|jobject,]...>([<fully.qualified.class.name.for.jobject.parameter>], ...)
+p. In addition method's arguments description must be defined whenever method has parameters to be passed to.
+Args is a template with variadic count of template arguments. Each template argument's type defines the corresponding parameter's type passed to the method and all @jobject@ parameters requires corresponding object's class name to be passes into Args class constructor.
 
-p. There several kind of @<field>s@ and @<method>s@
+bc.. Args<[jtype|jobject,]...>([<fully.qualified.class.name.for.jobject.parameter>], ...)
 
-|_/2. Field type |_\2. Applicable to |_/2. Description |
+p. There are several kind of @<field>s@ and @<method>s@ specified by prefix
+
+|_/2. Field type |_/2. Description |_\2. Applicable to |
 |_. @Class@ |_. @Object@ |
-| @Class::Static::Field@   | Yes | Yes | Accesing class's static fields |
-| @Object::Static::Field@  | Yes | Yes | The same as @Class::Static::Field@ |
-| @Object::Field@          | No  | Yes | Accessing object's fields |
+| @Class::Static::Field@   | Accessing class's static fields    | yes | yes |
+| @Object::Static::Field@  | The same as @Class::Static::Field@ | yes | yes |
+| @Object::Field@          | Accessing object's fields          | no  | yes |
 
-|_/2. Method type |_\2. Applicable to |_/2. Description |
-|_. @Class@ |_. @Object@ |
-| @Class::Static::Method@  | Yes | Yes | Accesing class's static methods |
-| @Class::Method@          | No  | Yes | Accessing non-virtual object's methods of specified class |
-| @Object::Static::Method@ | Yes | Yes | The same as @Class::Static::Method@ |
-| @Object::Method@         | No  | Yes | Accessing object's methods |
+|_/2. Method type |_/2. Description |_\2. Applicable to |
+|_. @Class@  |_. @Object@ |
+| @Class::Static::Method@  | Accessing class's static methods                          | yes | yes |
+| @Class::Method@          | Accessing non-virtual object's methods of specified class | no  | yes |
+| @Object::Static::Method@ | The same as @Class::Static::Method@                       | yes | yes |
+| @Object::Method@         | Accessing object's methods                                | no  | yes |
 
 
+h3. Wrapping @jarray@
+
+Array template class wraps java built-in container object and is specified by type of array elements.
+
+bc.. JNIEnv *jenv; jtypeArray jarr;
+
+Array<jtype> array(jenv, jarr);
+
+p. 
+
+Access @Array@ elements
+
+There is difference in accessing elements of @jobject@ type and elements of primitive types
+
+* accessing jobject elements
+
+bc.. Array<jstring> array(...);
+
+jstring si = array[i];
+array[i] = si;
+
+p. 
+
+* accessing all primitive elements
+Writing elements back happens on @Array::Elements@ destructor and only when elements have been acquired with a raised copyBack flag or might be fired manually by calling @commit@ method on @Elements@ object.
+
+bc.. Array<jtype> array(...);
+bool copyBack = false; # Tells whether copy all changes back to array
+
+Array<jtype>::Elements elements = array.elements(copyBack);
+jtype value = elements[i];
+elements[i] = value;
+elements.commit();
+
+p. 
+
+* accessing all primitive elements with critical restrictions
+
+bc.. Array<jtype>::Critical::Elements elements = array.critical(copyBack);
+jtype value = elements[i];
+elements[i] = value;
+elements.commit();
+
+p. 
+
+* accessing some @Region@ of primitive elements
+Requesting @Region@ allows to access small amount of elements. An index counts elements in the range not from array beginning.
+
+bc.. Array<jtype>::Region::Elements elements = array.region(Range(start, length), copyBack);
+jtype value = elements[i];
+elements[i] = value;
+elements.commit();
+
+p. 
+
+h3. Wrapping @jstring@
+
+Allows to comvert
+bc.. JNIEnv *jenv; jstring jstr;
+
+String string(jenv, jstr);
+std::string stdstr = string;
+jstr = String(jenv, "some native text");
+
+h3. TODO
+
+* Add exception handling
 
