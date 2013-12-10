@@ -35,7 +35,7 @@ void Test::testArray() {
         elements.commit();
     }{
         Array<T> array(*this, jsize(10));
-        typename Array<T>::Region::Elements elements = array[Region(0, 5)];
+        typename Array<T>::Region::Elements elements = array.region(Region(0, 5), true);
         (T)elements[jsize(0)];
         elements[jsize(0)] = T(0);
         T values[] = { T(0), T(0), T(0) };

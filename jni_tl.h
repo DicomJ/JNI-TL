@@ -102,11 +102,11 @@ struct Array : Env {
         return typename Critical::Elements(*this, copyBack);
     }
 
-    typename Region::Elements operator[] (const JNI::Region &region) {
-        return typename Region::Elements(*this, region);
+    typename Region::Elements region(const JNI::Region &region, bool copyBack = false) {
+        return typename Region::Elements(*this, region, copyBack);
     }
-    const typename Region::Elements operator[] (const JNI::Region &region) const {
-        return typename Region::Elements(*this, region);
+    const typename Region::Elements region(const JNI::Region &region, bool copyBack = false) const {
+        return typename Region::Elements(*this, region, copyBack);
     }
 
     typename Object::Element operator[] (int index) {
@@ -139,10 +139,13 @@ struct Array<T>::Region::Elements : private Array<T>, private JNI::Region {
     Element operator [] (jsize index) { return Element(*this, index); }
     const Element operator [] (jsize index) const { return Element(*this, index); }
 
-    ~Elements() { if (region != 0) { delete [] region; } }
+    ~Elements() {
+        if (copyBack) { commit(); }
+        if (region != 0) { delete [] region; }
+    }
 
-    Elements(const Array<T> &array, const JNI::Region &region)
-        : Array<T>(array), JNI::Region(region), region(0) {}
+    Elements(const Array<T> &array, const JNI::Region &region, bool copyBack)
+        : Array<T>(array), JNI::Region(region), copyBack(copyBack), region(0) {}
 
     Elements(const Elements &elements)
         : Array<T>(static_cast<const Array<T> &>(elements)),
@@ -169,6 +172,7 @@ struct Array<T>::Region::Elements : private Array<T>, private JNI::Region {
     }
 
     private: void get();
+    private: bool copyBack;
     private: Type *region;
 };
 
