@@ -16,7 +16,7 @@ Object object(clazz, jobj);
 
 h4. Accessing fields and methods
 
-p. @Object@ type inherits @Class@ type and both of them leverage accessing Java object's or/and class's methods and fields. Objects of these classes basically are used as maps of fields and methods which might be accessed by their definitions.
+p. @Object@ type inherits @Class@ type and both of them leverage accessing Java object's or/and class's methods and fields. Objects of these classes basically act as maps of fields and methods which might be accessed by their definitions.
 
 bc.. object[<method>](<arguments>)
 
@@ -61,7 +61,6 @@ p. There are several kind of @<field>s@ and @<method>s@ specified by prefix
 | @Class::Static::Field@   | Accessing class's static fields    | yes | yes |
 | @Object::Static::Field@  | The same as @Class::Static::Field@ | yes | yes |
 | @Object::Field@          | Accessing object's fields          | no  | yes |
-
 |_/2. Method type |_/2. Description |_\2. Applicable to |
 |_. @Class@  |_. @Object@ |
 | @Class::Static::Method@  | Accessing class's static methods                          | yes | yes |
