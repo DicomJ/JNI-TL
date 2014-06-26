@@ -39,7 +39,7 @@ object[Method<jboolean>("equals", Args<jobject>("java.lang.Object")](object);
 
 h4. Fields and methods definitions
 
-The @Field@ definition is represented by the name its and type. And when @jobject@ type is a case object's class name is must.
+The @Field@ definition is represented by the name and its type. And when @jobject@ type is a case, object's class name is must.
 
 bc.. <Specifier>::Field<jtype>("<field_name>")
 <Specifier>::Field<jobject>("<field_name>", "<fully.qualified.field.class.name>")
